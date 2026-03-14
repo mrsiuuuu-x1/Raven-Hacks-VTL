@@ -1,5 +1,6 @@
 import requests
 import os
+import mimetypes
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,20 +17,18 @@ def get_verdict(score: float) -> str:
 
 def analyze_image(image_path: str) -> dict:
     print("analyze_image called")
-    print("HF_API_KEY:", HF_API_KEY)
     
     url = "https://router.huggingface.co/hf-inference/models/umm-maybe/AI-image-detector"
     
-    headers = {
-        "Authorization": f"Bearer {HF_API_KEY}"
-    }
-    
+    content_type, _ = mimetypes.guess_type(image_path)
+    content_type = content_type or "image/jpeg"
+
     with open(image_path, "rb") as image_file:
         response = requests.post(
             url,
             headers={
                 "Authorization": f"Bearer {HF_API_KEY}",
-                "Content-Type": "image/jpeg"
+                "Content-Type": content_type
             },
             data=image_file
         )
