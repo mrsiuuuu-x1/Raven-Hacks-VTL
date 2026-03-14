@@ -16,7 +16,7 @@ def analyze_exif(image_path: str) -> list:
         if "GPSInfo" not in tag_names:
             flags.append("No GPS metadata")
         
-        if "DataTimeOriginal" not in tag_names:
+        if "DateTimeOriginal" not in tag_names:
             flags.append("No original capture timestamp")
 
         if "Make" not in tag_names and "Model" not in tag_names:
