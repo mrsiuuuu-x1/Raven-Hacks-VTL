@@ -19,20 +19,19 @@ def health():
     return {"status": "ok"}
 
 @app.post("/analyze")
-def analyze():
-    async def analyze(file: UploadFile = File(...)):
-        temp_path = f"temp_{file.filename}"
+async def analyze(file: UploadFile = File(...)):
+    temp_path = f"temp_{file.filename}"
 
-        with open(temp_path,"wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        
-        detection_result = analyze_image(temp_path)
-        exif_result = analyze_exif(temp_path)
+    with open(temp_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    detection_result = analyze_image(temp_path)
+    exif_result = analyze_exif(temp_path)
 
-        os.remove(temp_path)
+    os.remove(temp_path)
 
-        return {
-            "score": detection_result["score"],
-            "verdict": detection_result["verdict"],
-            "exif_flags": exif_result
-        }
+    return {
+        "score": detection_result["score"],
+        "verdict": detection_result["verdict"],
+        "exif_flags": exif_result
+    }

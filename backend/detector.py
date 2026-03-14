@@ -15,14 +15,24 @@ def get_verdict(score: float) -> str:
         return "Definitely AI"
 
 def analyze_image(image_path: str) -> dict:
-    url = "https://api-inference.huggingface.co/models/umm-maybe/AI-image-detector"
+    print("analyze_image called")
+    print("HF_API_KEY:", HF_API_KEY)
+    
+    url = "https://router.huggingface.co/hf-inference/models/umm-maybe/AI-image-detector"
     
     headers = {
         "Authorization": f"Bearer {HF_API_KEY}"
     }
     
     with open(image_path, "rb") as image_file:
-        response = requests.post(url, headers=headers, data=image_file)
+        response = requests.post(
+            url,
+            headers={
+                "Authorization": f"Bearer {HF_API_KEY}",
+                "Content-Type": "image/jpeg"
+            },
+            data=image_file
+        )
     
     print("STATUS CODE:", response.status_code)
     print("RESPONSE:", response.text)
@@ -32,7 +42,6 @@ def analyze_image(image_path: str) -> dict:
     
     data = response.json()
     
-    # find the "artificial" score
     ai_score = next(
         (item["score"] for item in data if item["label"] == "artificial"),
         0.0

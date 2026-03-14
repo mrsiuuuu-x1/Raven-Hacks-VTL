@@ -5,7 +5,7 @@ def analyze_exif(image_path: str) -> list:
     flags = []
     try:
         img = Image.open(image_path)
-        exif_data = img.__getexif()
+        exif_data = img._getexif()
 
         if not exif_data:
             flags.append("No EXIF data found")
