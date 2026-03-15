@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raven — Dashboard</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <nav>
+        <div class="nav-logo">
+            <span class="logo-bird">🪶</span>
+            <span class="logo-word">Ra<span>ven</span></span>
+        </div>
+        <div class="nav-links">
+            <a class="nav-link active">Dashboard</a>
+            <a class="nav-link disabled" title="Coming soon">History</a>
+            <a class="nav-link disabled" title="Coming soon">Reports</a>
+        </div>
+        <div class="nav-right">
+            <span class="nav-badge">● Online</span>
+            <span class="nav-user">Det. A. Rahman</span>
+        </div>
+    </nav>
+
+    <div class="shell">
+
+        <div class="left-panel">
+            <div class="hero">
+                <div class="hero-eyebrow">Forensic Image Analysis</div>
+                <h1 class="hero-title">Is this image <em>real?</em></h1>
+                <p class="hero-sub">Upload any image and get an instant AI-authenticity score, manipulation heatmap, and
+                    full EXIF metadata report in seconds.</p>
+
+                <div class="drop-zone" id="drop-zone">
+                    <div class="drop-icon">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M12 16V8M12 8l-3 3M12 8l3 3" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M3 16v2a2 2 0 002 2h14a2 2 0 002-2v-2" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" />
+                        </svg>
+                    </div>
+                    <div class="drop-main">Drop an image here</div>
+                    <div class="drop-or">— or —</div>
+                    <button class="drop-btn" id="browse-btn">Browse Files</button>
+                    <div class="drop-hint">JPG · PNG · WEBP · TIFF · up to 50MB</div>
+                </div>
+
+                <div class="how-it-works">
+                    <div class="step">
+                        <div class="step-num">01</div>
+                        <div class="step-label">Upload image</div>
+                    </div>
+                    <div class="step" style="color:var(--white-3)">————</div>
+                    <div class="step">
+                        <div class="step-num">02</div>
+                        <div class="step-label">AI analyzes</div>
+                    </div>
+                    <div class="step" style="color:var(--white-3)">————</div>
+                    <div class="step">
+                        <div class="step-num">03</div>
+                        <div class="step-label">Get verdict</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel" id="right-panel">
+            <div class="empty-state">
+                <div class="empty-icon">🔍</div>
+                <div class="empty-text">No image analyzed yet</div>
+                <div class="empty-sub">Upload an image to begin</div>
+            </div>
+        </div>
+
+    </div>
+
+    <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp,image/tiff">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
