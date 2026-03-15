@@ -40,6 +40,8 @@ async function computeSHA256(file) {
 }
 
 function computeMetadataIntegrity(exifFlags) {
+    const noExif = exifFlags.includes("No EXIF data found");
+    if (noExif) return 0;
     const totalChecks = 4;
     const flagKeywords = ["No GPS", "No original capture", "No camera", "Edited with"];
     let issues = 0;
@@ -210,6 +212,7 @@ function renderResults(data, file, sha256) {
     imgEl.src = objectUrl;
     imgEl.onload = () => {
         setTimeout(() => renderHeatmap(canvas, score), 100);
+        URL.revokeObjectURL(objectUrl);
     };
 
     document.getElementById("btn-new").addEventListener("click", resetUI);
@@ -219,9 +222,11 @@ function renderResults(data, file, sha256) {
 }
 
 function buildExifRows(exif_flags, sha256, file) {
+    const noExif = exif_flags.includes("No EXIF data found");
     const shortHash = sha256.slice(0, 8) + "..." + sha256.slice(-8);
 
-    const isFlagged = (keyword) => exif_flags.some(f => f.toLowerCase().includes(keyword.toLowerCase()));
+    const isFlagged = (keyword) =>
+        noExif || exif_flags.some(f => f.toLowerCase().includes(keyword.toLowerCase()));
 
     const softwareFlag = exif_flags.find(f => f.startsWith("Edited with software:"));
     const softwareVal = softwareFlag ? softwareFlag.replace("Edited with software: ", "") : null;
@@ -229,15 +234,15 @@ function buildExifRows(exif_flags, sha256, file) {
     const rows = [
         {
             key: "Camera Model",
-            val: isFlagged("No camera") ? `<span style="color:var(--white-3)">— missing<span class="flag">FLAG</span></span>` : `<span style="color:var(--white)">Present</span>`
+            val: isFlagged("no camera") ? `<span style="color:var(--white-3)">— missing<span class="flag">FLAG</span></span>` : `<span style="color:var(--white)">Present</span>`
         },
         {
             key: "GPS Data",
-            val: isFlagged("No GPS") ? `<span style="color:var(--white-3)">— stripped<span class="flag">FLAG</span></span>` : `<span style="color:var(--white)">Present</span>`
+            val: isFlagged("no gps") ? `<span style="color:var(--white-3)">— not found<span class="flag">FLAG</span></span>` : `<span style="color:var(--white)">Present</span>`
         },
         {
             key: "Timestamp",
-            val: isFlagged("No original capture") ? `<span style="color:var(--white-3)">— missing<span class="flag">FLAG</span></span>` : `<span style="color:var(--white)">Present</span>`
+            val: isFlagged("no original capture") ? `<span style="color:var(--white-3)">— missing<span class="flag">FLAG</span></span>` : `<span style="color:var(--white)">Present</span>`
         },
         {
             key: "Software",
@@ -339,10 +344,11 @@ async function exportPDF(data, file, sha256, metaIntegrity, compressionAnomaly, 
     doc.text("EXIF METADATA", 14, y);
     y += 6;
 
+    const noExif = exif_flags.includes("No EXIF data found");
     const exifEntries = [
-        ["Camera Model", exif_flags.some(f => f.includes("No camera")) ? "Missing — FLAGGED" : "Present"],
-        ["GPS Data", exif_flags.some(f => f.includes("No GPS")) ? "Stripped — FLAGGED" : "Present"],
-        ["Timestamp", exif_flags.some(f => f.includes("No original capture")) ? "Missing — FLAGGED" : "Present"],
+        ["Camera Model", (noExif || exif_flags.some(f => f.includes("no camera"))) ? "Missing — FLAGGED" : "Present"],
+        ["GPS Data", (noExif || exif_flags.some(f => f.includes("no gps"))) ? "Missing — FLAGGED" : "Present"],
+        ["Timestamp", (noExif || exif_flags.some(f => f.includes("no original capture"))) ? "Missing — FLAGGED" : "Present"],
         ["Software", exif_flags.find(f => f.startsWith("Edited with software:"))?.replace("Edited with software: ", "") || "—"],
         ["SHA-256", sha256]
     ];
@@ -380,11 +386,8 @@ async function handleFile(file) {
             computeSHA256(file),
             uploadToAPI(file)
         ]);
-        console.log("API Result:", apiResult);
-        console.log("SHA256:", sha256);
         renderResults(apiResult, file, sha256);
     } catch (err) {
-        console.log("Error:", err);
         showError(err.message);
     }
 }
