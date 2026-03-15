@@ -41,7 +41,7 @@ def analyze_image(image_path: str) -> dict:
     data = response.json()
 
     ai_score = next(
-        (item["score"] for item in data if item["label"] == "FAKE"),
+        (item["score"] for item in data if item["label"] == "artificial"),
         0.0
     )
 
