@@ -1,4 +1,27 @@
 const API_BASE = "http://127.0.0.1:8000";
+const STORAGE_KEY = "raven_scan_history";
+
+function saveToHistory(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags) {
+    const entry = {
+        filename: file.name,
+        fileSize: formatFileSize(file.size),
+        ext: file.name.split(".").pop().toUpperCase(),
+        score: data.score,
+        verdict: data.verdict,
+        exif_flags,
+        sha256,
+        metaIntegrity,
+        compressionAnomaly,
+        analyzedAt
+    };
+    try {
+        const history = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        history.push(entry);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    } catch (e) {
+        console.warn("Could not save to history:", e);
+    }
+}
 
 const dropZone = document.getElementById("drop-zone");
 const fileInput = document.getElementById("file-input");
@@ -140,6 +163,8 @@ function renderResults(data, file, sha256) {
     const ext = file.name.split(".").pop().toUpperCase();
     const flagCount = exif_flags.filter(f => !f.startsWith("No suspicious")).length;
 
+    saveToHistory(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags);
+
     const exifRows = buildExifRows(exif_flags, sha256, file);
 
     const metaColor = metaIntegrity >= 70 ? "var(--green)" : metaIntegrity >= 40 ? "var(--amber)" : "var(--red)";
@@ -238,7 +263,7 @@ function buildExifRows(exif_flags, sha256, file) {
         },
         {
             key: "GPS Data",
-            val: isFlagged("no gps") ? `<span style="color:var(--white-3)">— not found<span class="flag">FLAG</span></span>` : `<span style="color:var(--white)">Present</span>`
+            val: isFlagged("no gps") ? `<span style="color:var(--white-3)">— stripped<span class="flag">FLAG</span></span>` : `<span style="color:var(--white)">Present</span>`
         },
         {
             key: "Timestamp",
@@ -347,7 +372,7 @@ async function exportPDF(data, file, sha256, metaIntegrity, compressionAnomaly, 
     const noExif = exif_flags.includes("No EXIF data found");
     const exifEntries = [
         ["Camera Model", (noExif || exif_flags.some(f => f.includes("no camera"))) ? "Missing — FLAGGED" : "Present"],
-        ["GPS Data", (noExif || exif_flags.some(f => f.includes("no gps"))) ? "Missing — FLAGGED" : "Present"],
+        ["GPS Data", (noExif || exif_flags.some(f => f.includes("no gps"))) ? "Stripped — FLAGGED" : "Present"],
         ["Timestamp", (noExif || exif_flags.some(f => f.includes("no original capture"))) ? "Missing — FLAGGED" : "Present"],
         ["Software", exif_flags.find(f => f.startsWith("Edited with software:"))?.replace("Edited with software: ", "") || "—"],
         ["SHA-256", sha256]
