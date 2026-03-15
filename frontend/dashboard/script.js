@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:8000";
+const API_BASE = "http://127.0.0.1:8000";
 
 const dropZone = document.getElementById("drop-zone");
 const fileInput = document.getElementById("file-input");
@@ -380,8 +380,11 @@ async function handleFile(file) {
             computeSHA256(file),
             uploadToAPI(file)
         ]);
+        console.log("API Result:", apiResult);
+        console.log("SHA256:", sha256);
         renderResults(apiResult, file, sha256);
     } catch (err) {
+        console.log("Error:", err);
         showError(err.message);
     }
 }

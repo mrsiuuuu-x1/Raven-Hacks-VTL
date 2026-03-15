@@ -2,6 +2,7 @@ import requests
 import os
 import mimetypes
 from dotenv import load_dotenv
+from fastapi import HTTPException
 
 load_dotenv()
 
@@ -16,9 +17,8 @@ def get_verdict(score: float) -> str:
         return "Definitely AI"
 
 def analyze_image(image_path: str) -> dict:
-    
     url = "https://router.huggingface.co/hf-inference/models/umm-maybe/AI-image-detector"
-    
+
     content_type, _ = mimetypes.guess_type(image_path)
     content_type = content_type or "image/jpeg"
 
@@ -31,18 +31,21 @@ def analyze_image(image_path: str) -> dict:
             },
             data=image_file
         )
-    
+
     if response.status_code != 200:
-        return {"score": 0.0, "verdict": "Error — could not analyze image"}
-    
+        raise HTTPException(
+            status_code=502,
+            detail=f"HuggingFace inference failed: {response.status_code} {response.text}"
+        )
+
     data = response.json()
-    
+
     ai_score = next(
         (item["score"] for item in data if item["label"] == "FAKE"),
         0.0
     )
-    
+
     score = round(ai_score * 100, 1)
     verdict = get_verdict(score)
-    
+
     return {"score": score, "verdict": verdict}
