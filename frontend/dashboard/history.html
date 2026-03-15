@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raven — History</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="history.css">
+</head>
+
+<body>
+
+    <nav>
+        <div class="nav-logo">
+            <span class="logo-bird">🪶</span>
+            <span class="logo-word">Ra<span>ven</span></span>
+        </div>
+        <div class="nav-links">
+            <a class="nav-link" href="index.html">Dashboard</a>
+            <a class="nav-link active">History</a>
+            <a class="nav-link disabled" title="Coming soon">Reports</a>
+        </div>
+        <div class="nav-right">
+            <span class="nav-badge">● Online</span>
+            <span class="nav-user">Det. A. Rahman</span>
+        </div>
+    </nav>
+
+    <div class="history-shell">
+        <div class="history-header">
+            <div class="history-title-block">
+                <div class="history-eyebrow">Scan Records</div>
+                <h1 class="history-title">History</h1>
+            </div>
+            <div style="display:flex;align-items:center;gap:16px">
+                <span class="history-count" id="scan-count"></span>
+                <button class="btn-clear" id="btn-clear">Clear History</button>
+            </div>
+        </div>
+
+        <div class="history-body" id="history-body"></div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal" id="modal-content"></div>
+    </div>
+
+    <!-- Confirm Clear Overlay -->
+    <div class="modal-overlay" id="confirm-overlay">
+        <div class="modal confirm-modal">
+            <div class="modal-header">
+                <div>
+                    <div class="modal-title">Clear History</div>
+                    <div class="modal-meta">This cannot be undone</div>
+                </div>
+            </div>
+            <div style="padding:20px 24px;font-size:13px;color:var(--white-2);line-height:1.6;">
+                All <span id="confirm-count"></span> scan records will be permanently deleted from your browser.
+            </div>
+            <div style="padding:0 24px 24px;display:flex;gap:10px;">
+                <button class="btn-big secondary" id="confirm-cancel" style="flex:1">Cancel</button>
+                <button class="btn-big primary" id="confirm-ok" style="flex:1">Clear All</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="history.js"></script>
+
+</body>
+</html>
