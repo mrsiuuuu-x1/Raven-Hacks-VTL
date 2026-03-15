@@ -16,7 +16,6 @@ def get_verdict(score: float) -> str:
         return "Definitely AI"
 
 def analyze_image(image_path: str) -> dict:
-    print("analyze_image called")
     
     url = "https://router.huggingface.co/hf-inference/models/umm-maybe/AI-image-detector"
     
@@ -33,16 +32,13 @@ def analyze_image(image_path: str) -> dict:
             data=image_file
         )
     
-    print("STATUS CODE:", response.status_code)
-    print("RESPONSE:", response.text)
-    
     if response.status_code != 200:
         return {"score": 0.0, "verdict": "Error — could not analyze image"}
     
     data = response.json()
     
     ai_score = next(
-        (item["score"] for item in data if item["label"] == "artificial"),
+        (item["score"] for item in data if item["label"] == "FAKE"),
         0.0
     )
     
