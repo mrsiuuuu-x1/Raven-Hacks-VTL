@@ -321,7 +321,7 @@
 }
 
 /* Modal */
-.model-overlay {
+.modal-overlay {
     display: none;
     position: fixed;
     inset: 0;
