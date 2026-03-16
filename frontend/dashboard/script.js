@@ -1,4 +1,4 @@
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = "https://mrsiuuuu-x1-nullify-backend.hf.space";
 const STORAGE_KEY = "nullify_scan_history";
 
 function saveToHistory(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags) {
