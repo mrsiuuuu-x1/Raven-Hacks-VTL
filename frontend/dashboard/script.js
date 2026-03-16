@@ -315,7 +315,7 @@ async function exportPDF(data, file, sha256, metaIntegrity, compressionAnomaly, 
 
     // Green part
     doc.setTextColor(0, 194, 168);
-    doc.text("!fy", 24, 11.5);
+    doc.text("!fy", 22, 11.5);
 
     doc.setFontSize(8);
     doc.setTextColor(140, 147, 160);
