@@ -155,6 +155,10 @@ function openScanDetail(caseIndex, scanIndex) {
             </div>
             <button class="modal-close" onclick="closeDetail()">×</button>
         </div>
+        ${scan.thumbnail ? `
+        <div style="padding:16px 24px;border-bottom:1px solid var(--border);">
+            <img src="${scan.thumbnail}" style="width:100%;border-radius:8px;object-fit:cover;max-height:180px;display:block;" alt="scan thumbnail">
+        </div>` : ""}
         <div class="verdict-block ${vc}">
             <div class="verdict-number">${scan.score}<span style="font-size:36px">%</span></div>
             <div class="verdict-unit">AI-generated probability</div>

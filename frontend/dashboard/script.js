@@ -1,4 +1,4 @@
-const API_BASE = "https://mrsiuuuu-x1-nullify-backend.hf.space";
+const API_BASE = "http://127.0.0.1:8000";
 const STORAGE_KEY = "nullify_scan_history";
 
 function saveToHistory(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags) {
@@ -30,28 +30,6 @@ const rightPanel = document.getElementById("right-panel");
 
 let currentResult = null;
 let currentFile = null;
-
-// ── Info Modal ────────────────────────────────────────────
-const infoBtn = document.getElementById("info-btn");
-const infoOverlay = document.getElementById("info-overlay");
-const infoClose = document.getElementById("info-close");
-
-infoBtn.addEventListener("click", () => {
-    infoOverlay.classList.add("open");
-});
-
-infoClose.addEventListener("click", () => {
-    infoOverlay.classList.remove("open");
-});
-
-infoOverlay.addEventListener("click", (e) => {
-    if (e.target === infoOverlay) infoOverlay.classList.remove("open");
-});
-
-document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") infoOverlay.classList.remove("open");
-});
-// ─────────────────────────────────────────────────────────
 
 browseBtn.addEventListener("click", () => fileInput.click());
 
@@ -484,7 +462,7 @@ function resetUI() {
   `;
 }
 
-// ── Case dropdown ─────────────────────────────────────────────
+// Case dropdown 
 const CASES_KEY = "nullify_cases";
 
 function loadCases() {
@@ -496,7 +474,6 @@ function saveCases(cases) {
 }
 
 function openCaseDropdown(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags) {
-    // Remove existing overlay if any
     const existing = document.getElementById("case-overlay");
     if (existing) existing.remove();
 
@@ -563,7 +540,6 @@ function openCaseDropdown(data, file, sha256, metaIntegrity, compressionAnomaly,
 
     document.body.appendChild(overlay);
 
-    // Search filter
     document.getElementById("case-search").addEventListener("input", (e) => {
         const q = e.target.value.toLowerCase();
         document.querySelectorAll(".case-list-item").forEach(item => {
@@ -572,12 +548,10 @@ function openCaseDropdown(data, file, sha256, metaIntegrity, compressionAnomaly,
         });
     });
 
-    // Close
     document.getElementById("close-case-overlay").addEventListener("click", () => overlay.remove());
     overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
 
-    // Create new case
-    document.getElementById("btn-create-case").addEventListener("click", () => {
+    document.getElementById("btn-create-case").addEventListener("click", async () => {
         const name = document.getElementById("case-search").value.trim();
         if (!name) { document.getElementById("case-search").focus(); return; }
         const notes = document.getElementById("case-notes").value.trim();
@@ -588,20 +562,19 @@ function openCaseDropdown(data, file, sha256, metaIntegrity, compressionAnomaly,
             notes: "",
             scans: []
         };
-        addScanToCase(newCase, data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, notes);
+        await addScanToCase(newCase, data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, notes);
         cases.push(newCase);
         saveCases(cases);
         overlay.remove();
         showCaseSuccess(name);
     });
 
-    // Add to existing case
     document.querySelectorAll(".case-list-item").forEach(item => {
-        item.addEventListener("click", () => {
+        item.addEventListener("click", async () => {
             const index = parseInt(item.dataset.index);
             const notes = document.getElementById("case-notes").value.trim();
             const cases = loadCases();
-            addScanToCase(cases[index], data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, notes);
+            await addScanToCase(cases[index], data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, notes);
             saveCases(cases);
             overlay.remove();
             showCaseSuccess(cases[index].name);
@@ -609,7 +582,28 @@ function openCaseDropdown(data, file, sha256, metaIntegrity, compressionAnomaly,
     });
 }
 
-function addScanToCase(caseObj, data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, notes) {
+async function generateThumbnail(file) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const MAX = 120;
+            const ratio = Math.min(MAX / img.width, MAX / img.height);
+            canvas.width = Math.round(img.width * ratio);
+            canvas.height = Math.round(img.height * ratio);
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            URL.revokeObjectURL(url);
+            resolve(canvas.toDataURL("image/jpeg", 0.6));
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+        img.src = url;
+    });
+}
+
+async function addScanToCase(caseObj, data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, notes) {
+    const thumbnail = await generateThumbnail(file);
     caseObj.scans.push({
         filename: file.name,
         fileSize: formatFileSize(file.size),
@@ -621,7 +615,8 @@ function addScanToCase(caseObj, data, file, sha256, metaIntegrity, compressionAn
         metaIntegrity,
         compressionAnomaly,
         analyzedAt,
-        notes: notes || ""
+        notes: notes || "",
+        thumbnail
     });
 }
 
