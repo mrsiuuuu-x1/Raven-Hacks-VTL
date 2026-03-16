@@ -1,16 +1,11 @@
-const STORAGE_KEY = "nullify_scan_history";
+const CASES_KEY = "nullify_cases";
 
-function loadHistory() {
-    try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-    } catch {
-        return [];
-    }
+function loadCases() {
+    try { return JSON.parse(localStorage.getItem(CASES_KEY)) || []; } catch { return []; }
 }
 
-function clearHistory() {
-    localStorage.removeItem(STORAGE_KEY);
-    renderHistory();
+function saveCases(cases) {
+    localStorage.setItem(CASES_KEY, JSON.stringify(cases));
 }
 
 function getVerdictClass(verdict) {
@@ -25,31 +20,91 @@ function getScoreColor(val) {
     return "var(--green)";
 }
 
-function renderHistory() {
-    const history = loadHistory();
-    const body = document.getElementById("history-body");
-    const countEl = document.getElementById("scan-count");
+let currentCaseIndex = null;
+let currentFilter = "all";
 
-    countEl.textContent = history.length > 0 ? `${history.length} scan${history.length > 1 ? "s" : ""}` : "";
+function renderCases() {
+    const cases = loadCases();
+    const body = document.getElementById("cases-body");
+    const countEl = document.getElementById("case-count");
 
-    if (history.length === 0) {
+    countEl.textContent = cases.length > 0 ? `${cases.length} case${cases.length !== 1 ? "s" : ""}` : "";
+
+    if (cases.length === 0) {
         body.innerHTML = `
-            <div class="empty-history">
-                <div class="empty-history-icon">🗂</div>
-                <div class="empty-history-text">No scans yet</div>
-                <div class="empty-history-sub">Analyzed images will appear here</div>
-                <a class="empty-history-link" href="index.html">← Go to Dashboard</a>
+            <div class="empty-cf">
+                <div class="empty-cf-icon">🗄️</div>
+                <div class="empty-cf-text">No cases yet</div>
+                <div class="empty-cf-sub">Use "Add to Case" after scanning an image to create a case</div>
+                <a class="empty-cf-link" href="index.html">← Go to Dashboard</a>
             </div>
         `;
         return;
     }
 
-    const rows = [...history].reverse().map((scan, i) => {
+    const cards = cases.map((c, i) => {
+        const aiCount = c.scans.filter(s => s.verdict === "Definitely AI").length;
+        const likelyCount = c.scans.filter(s => s.verdict === "Likely AI").length;
+        const realCount = c.scans.filter(s => s.verdict === "Real").length;
+
+        return `
+        <div class="case-card" onclick="openCase(${i})">
+            <button class="case-card-delete" onclick="event.stopPropagation(); deleteCase(${i})">✕</button>
+            <div class="case-card-icon">🗂️</div>
+            <div class="case-card-name">${c.name}</div>
+            <div class="case-card-meta">Created ${c.createdAt} · ${c.scans.length} scan${c.scans.length !== 1 ? "s" : ""}</div>
+            ${c.notes ? `<div class="case-card-notes">${c.notes}</div>` : ""}
+            <div class="case-card-stats">
+                <span class="case-stat total">${c.scans.length} total</span>
+                ${aiCount > 0 ? `<span class="case-stat ai">${aiCount} Definitely AI</span>` : ""}
+                ${likelyCount > 0 ? `<span class="case-stat likely">${likelyCount} Likely AI</span>` : ""}
+                ${realCount > 0 ? `<span class="case-stat real">${realCount} Real</span>` : ""}
+            </div>
+        </div>`;
+    }).join("");
+
+    body.innerHTML = `<div class="cases-grid">${cards}</div>`;
+}
+
+function openCase(index) {
+    currentCaseIndex = index;
+    currentFilter = "all";
+    const cases = loadCases();
+    const c = cases[index];
+
+    document.getElementById("view-cases").style.display = "none";
+    document.getElementById("view-case").style.display = "block";
+    document.getElementById("case-title").textContent = c.name;
+    document.getElementById("case-eyebrow").textContent = `${c.scans.length} scan${c.scans.length !== 1 ? "s" : ""} · ${c.createdAt}`;
+
+    document.querySelectorAll(".filter-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.filter === "all");
+    });
+
+    renderCaseScans(c.scans);
+}
+
+function renderCaseScans(scans) {
+    const body = document.getElementById("case-scans-body");
+    const filtered = currentFilter === "all" ? scans : scans.filter(s => s.verdict === currentFilter);
+
+    if (filtered.length === 0) {
+        body.innerHTML = `
+            <div class="empty-case">
+                <div style="font-size:32px;opacity:0.3">🔍</div>
+                <div style="font-size:13px;color:var(--white-2)">No scans match this filter</div>
+            </div>
+        `;
+        return;
+    }
+
+    const rows = filtered.map((scan, i) => {
         const vc = getVerdictClass(scan.verdict);
         const scoreColor = getScoreColor(scan.score);
         const metaColor = scan.metaIntegrity >= 70 ? "var(--green)" : scan.metaIntegrity >= 40 ? "var(--amber)" : "var(--red)";
+        const originalIndex = scans.indexOf(scan);
         return `
-        <tr onclick="openDetail(${history.length - 1 - i})">
+        <tr onclick="openScanDetail(${currentCaseIndex}, ${originalIndex})">
             <td class="td-filename">${scan.filename}</td>
             <td class="td-score" style="color:${scoreColor}">${scan.score}%</td>
             <td><span class="verdict-pill ${vc}">${scan.verdict}</span></td>
@@ -76,9 +131,9 @@ function renderHistory() {
     `;
 }
 
-function openDetail(index) {
-    const history = loadHistory();
-    const scan = history[index];
+function openScanDetail(caseIndex, scanIndex) {
+    const cases = loadCases();
+    const scan = cases[caseIndex].scans[scanIndex];
     if (!scan) return;
 
     const vc = getVerdictClass(scan.verdict);
@@ -86,7 +141,6 @@ function openDetail(index) {
     const metaColor = scan.metaIntegrity >= 70 ? "var(--green)" : scan.metaIntegrity >= 40 ? "var(--amber)" : "var(--red)";
     const compColor = getScoreColor(scan.compressionAnomaly);
     const noExif = scan.exif_flags.includes("No EXIF data found");
-
     const isFlagged = (kw) => noExif || scan.exif_flags.some(f => f.toLowerCase().includes(kw.toLowerCase()));
     const softwareFlag = scan.exif_flags.find(f => f.startsWith("Edited with software:"));
     const softwareVal = softwareFlag ? softwareFlag.replace("Edited with software: ", "") : null;
@@ -141,6 +195,7 @@ function openDetail(index) {
                 <div class="m-row"><span class="m-key">SHA-256</span><span class="m-val"><span style="font-size:10px;color:var(--white-2)">${shortHash}</span></span></div>
             </div>
         </div>
+        ${scan.notes ? `<div class="meta-block"><div class="block-label">Detective Notes</div><div style="padding:8px 0;font-size:13px;color:var(--white-2);line-height:1.6">${scan.notes}</div></div>` : ""}
         <div class="action-block">
             <button class="btn-big secondary" onclick="closeDetail()">Close</button>
         </div>
@@ -153,29 +208,35 @@ function closeDetail() {
     document.getElementById("modal-overlay").classList.remove("open");
 }
 
+function deleteCase(index) {
+    const cases = loadCases();
+    cases.splice(index, 1);
+    saveCases(cases);
+    renderCases();
+}
+
+// Filter buttons
+document.querySelectorAll(".filter-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+        currentFilter = btn.dataset.filter;
+        document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const cases = loadCases();
+        if (currentCaseIndex !== null) renderCaseScans(cases[currentCaseIndex].scans);
+    });
+});
+
+// Back button
+document.getElementById("btn-back").addEventListener("click", () => {
+    document.getElementById("view-case").style.display = "none";
+    document.getElementById("view-cases").style.display = "block";
+    currentCaseIndex = null;
+    renderCases();
+});
+
+// Close modal on overlay click
 document.getElementById("modal-overlay").addEventListener("click", (e) => {
     if (e.target === document.getElementById("modal-overlay")) closeDetail();
 });
 
-document.getElementById("btn-clear").addEventListener("click", () => {
-    const history = loadHistory();
-    document.getElementById("confirm-count").textContent = `${history.length} scan${history.length !== 1 ? "s" : ""}`;
-    document.getElementById("confirm-overlay").classList.add("open");
-});
-
-document.getElementById("confirm-cancel").addEventListener("click", () => {
-    document.getElementById("confirm-overlay").classList.remove("open");
-});
-
-document.getElementById("confirm-ok").addEventListener("click", () => {
-    document.getElementById("confirm-overlay").classList.remove("open");
-    clearHistory();
-});
-
-document.getElementById("confirm-overlay").addEventListener("click", (e) => {
-    if (e.target === document.getElementById("confirm-overlay")) {
-        document.getElementById("confirm-overlay").classList.remove("open");
-    }
-});
-
-renderHistory();
+renderCases();

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nullify — Cases</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="cases.css">
+</head>
+
+<body>
+
+    <nav>
+        <div class="nav-logo">
+            <span class="logo-bird">🔍</span>
+            <span class="logo-word">Null<span>!fy</span></span>
+        </div>
+        <div class="nav-links">
+            <a class="nav-link" href="index.html">Dashboard</a>
+            <a class="nav-link" href="history.html">History</a>
+            <a class="nav-link disabled" title="Coming soon">Reports</a>
+            <a class="nav-link active">Cases</a>
+        </div>
+        <div class="nav-right">
+            <span class="nav-badge">● Online</span>
+            <span class="nav-user">Det. A. Rahman</span>
+        </div>
+    </nav>
+
+    <div class="cf-shell" id="cf-shell">
+        <!-- Cases list view -->
+        <div id="view-cases">
+            <div class="cf-header">
+                <div>
+                    <div class="cf-eyebrow">Investigation Files</div>
+                    <h1 class="cf-title">Cases</h1>
+                </div>
+                <span class="cf-count" id="case-count"></span>
+            </div>
+            <div class="cf-body" id="cases-body"></div>
+        </div>
+
+        <!-- Single case view -->
+        <div id="view-case" style="display:none">
+            <div class="cf-header">
+                <div style="display:flex;align-items:center;gap:16px">
+                    <button class="btn-back" id="btn-back">← Back</button>
+                    <div>
+                        <div class="cf-eyebrow" id="case-eyebrow">Case</div>
+                        <h1 class="cf-title" id="case-title"></h1>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px">
+                    <div class="filter-bar">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="Definitely AI">Definitely AI</button>
+                        <button class="filter-btn" data-filter="Likely AI">Likely AI</button>
+                        <button class="filter-btn" data-filter="Real">Real</button>
+                    </div>
+                </div>
+            </div>
+            <div class="cf-body" id="case-scans-body"></div>
+        </div>
+    </div>
+
+    <!-- Scan detail modal -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal" id="modal-content"></div>
+    </div>
+
+    <script src="cases.js"></script>
+
+</body>
+</html>
