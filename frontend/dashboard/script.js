@@ -588,14 +588,14 @@ async function generateThumbnail(file) {
         const url = URL.createObjectURL(file);
         img.onload = () => {
             const canvas = document.createElement("canvas");
-            const MAX = 120;
+            const MAX = 480;
             const ratio = Math.min(MAX / img.width, MAX / img.height);
             canvas.width = Math.round(img.width * ratio);
             canvas.height = Math.round(img.height * ratio);
             const ctx = canvas.getContext("2d");
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             URL.revokeObjectURL(url);
-            resolve(canvas.toDataURL("image/jpeg", 0.6));
+            resolve(canvas.toDataURL("image/jpeg", 0.8));
         };
         img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
         img.src = url;
