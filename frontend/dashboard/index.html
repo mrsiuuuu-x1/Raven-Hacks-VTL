@@ -17,6 +17,7 @@
         <div class="nav-logo">
             <span class="logo-bird">🔍</span>
             <span class="logo-word">Null<span>!fy</span></span>
+            <button class="info-btn" id="info-btn" title="Scoring guide & glossary">i</button>
         </div>
         <div class="nav-links">
             <a class="nav-link active">Dashboard</a>
@@ -83,6 +84,130 @@
     </div>
 
     <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp,image/tiff">
+
+    <!-- Info Modal -->
+    <div class="info-overlay" id="info-overlay">
+        <div class="info-modal" id="info-modal">
+            <div class="info-modal-header">
+                <div class="info-modal-title">Null<span>!fy</span> — Glossary &amp; Scoring Guide</div>
+                <button class="info-close" id="info-close">✕</button>
+            </div>
+
+            <div class="info-section">
+                <div class="info-section-label">Score Variables</div>
+
+                <div class="info-card">
+                    <div class="info-card-header">
+                        <div class="info-dot" style="background:var(--red)"></div>
+                        <div class="info-card-name">AI Manipulation Score</div>
+                    </div>
+                    <div class="info-card-desc">The primary verdict score. Reflects how likely the image was generated
+                        or significantly altered by an AI model (e.g. Stable Diffusion, Midjourney, DALL·E, or
+                        inpainting tools). Computed by the backend neural classifier against millions of real and
+                        synthetic images.</div>
+                    <div class="info-card-range">
+                        <div class="info-range-item">
+                            <div class="info-range-dot" style="background:var(--green)"></div><span>0–29% Real</span>
+                        </div>
+                        <div class="info-range-item">
+                            <div class="info-range-dot" style="background:var(--amber)"></div><span>30–69% Likely
+                                AI</span>
+                        </div>
+                        <div class="info-range-item">
+                            <div class="info-range-dot" style="background:var(--red)"></div><span>70–100% Definitely
+                                AI</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-card-header">
+                        <div class="info-dot" style="background:var(--teal)"></div>
+                        <div class="info-card-name">Metadata Integrity</div>
+                    </div>
+                    <div class="info-card-desc">Measures how intact the image's EXIF metadata is. Genuine camera photos
+                        typically contain rich metadata (camera model, GPS, capture timestamp). AI-generated images and
+                        edited files often strip or lack this data entirely — raising suspicion. Higher = more
+                        trustworthy metadata.</div>
+                    <div class="info-card-range">
+                        <div class="info-range-item">
+                            <div class="info-range-dot" style="background:var(--red)"></div><span>0–39% Poor</span>
+                        </div>
+                        <div class="info-range-item">
+                            <div class="info-range-dot" style="background:var(--amber)"></div><span>40–69%
+                                Partial</span>
+                        </div>
+                        <div class="info-range-item">
+                            <div class="info-range-dot" style="background:var(--green)"></div><span>70–100% Good</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-card-header">
+                        <div class="info-dot" style="background:var(--amber)"></div>
+                        <div class="info-card-name">Compression Anomaly</div>
+                    </div>
+                    <div class="info-card-desc">Estimates how unusual the file's compression patterns are relative to
+                        organic camera output. AI-generated images and re-saved files often show atypical compression
+                        artefacts in their DCT coefficients and block structures. Higher score = more anomalous
+                        compression, suggesting manipulation.</div>
+                    <div class="info-card-range">
+                        <div class="info-range-item">
+                            <div class="info-range-dot" style="background:var(--green)"></div><span>0–29 Normal</span>
+                        </div>
+                        <div class="info-range-item">
+                            <div class="info-range-dot" style="background:var(--amber)"></div><span>30–69
+                                Suspicious</span>
+                        </div>
+                        <div class="info-range-item">
+                            <div class="info-range-dot" style="background:var(--red)"></div><span>70–100
+                                Anomalous</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="info-divider">
+
+            <div class="info-section">
+                <div class="info-section-label">EXIF Flags Explained</div>
+
+                <div class="info-flag-row">
+                    <div class="info-flag-key">Camera Model</div>
+                    <div class="info-flag-text">The make and model of the recording device (e.g. iPhone 15 Pro, Canon
+                        EOS R5). Missing in AI-generated images and most screenshots — flagged as suspicious when absent
+                        alongside other missing fields.</div>
+                </div>
+                <div class="info-flag-row">
+                    <div class="info-flag-key">GPS Data</div>
+                    <div class="info-flag-text">Geolocation coordinates embedded at capture time. Often stripped by
+                        social media platforms for privacy, but its absence alongside other missing fields raises
+                        overall suspicion.</div>
+                </div>
+                <div class="info-flag-row">
+                    <div class="info-flag-key">Timestamp</div>
+                    <div class="info-flag-text">The original capture date/time written by camera firmware
+                        (DateTimeOriginal). Distinct from file modification date — AI tools and editors rarely forge
+                        this field correctly.</div>
+                </div>
+                <div class="info-flag-row">
+                    <div class="info-flag-key">Software</div>
+                    <div class="info-flag-text">Records which application last processed or saved the file (e.g. "Adobe
+                        Photoshop 2024", "GIMP 2.10"). Its presence doesn't confirm forgery, but flags that the image
+                        passed through editing software.</div>
+                </div>
+                <div class="info-flag-row">
+                    <div class="info-flag-key">SHA-256</div>
+                    <div class="info-flag-text">A cryptographic fingerprint of the raw file bytes. Unique to each file
+                        version — even a single changed pixel produces a completely different hash. Used to verify
+                        integrity and detect re-saves.</div>
+                </div>
+            </div>
+
+            <div class="info-footer">Results are probabilistic. Use alongside other investigative methods.</div>
+        </div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="script.js"></script>
