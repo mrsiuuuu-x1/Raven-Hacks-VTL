@@ -31,6 +31,28 @@ const rightPanel = document.getElementById("right-panel");
 let currentResult = null;
 let currentFile = null;
 
+// ── Info Modal ────────────────────────────────────────────
+const infoBtn = document.getElementById("info-btn");
+const infoOverlay = document.getElementById("info-overlay");
+const infoClose = document.getElementById("info-close");
+
+infoBtn.addEventListener("click", () => {
+    infoOverlay.classList.add("open");
+});
+
+infoClose.addEventListener("click", () => {
+    infoOverlay.classList.remove("open");
+});
+
+infoOverlay.addEventListener("click", (e) => {
+    if (e.target === infoOverlay) infoOverlay.classList.remove("open");
+});
+
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") infoOverlay.classList.remove("open");
+});
+// ─────────────────────────────────────────────────────────
+
 browseBtn.addEventListener("click", () => fileInput.click());
 
 dropZone.addEventListener("click", (e) => {
