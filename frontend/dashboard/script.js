@@ -9,6 +9,7 @@ function saveToHistory(data, file, sha256, metaIntegrity, compressionAnomaly, an
         score: data.score,
         verdict: data.verdict,
         exif_flags,
+        exif_values: data.exif_values || {},
         sha256,
         metaIntegrity,
         compressionAnomaly,
@@ -154,7 +155,7 @@ function showAnalyzing() {
 }
 
 function renderResults(data, file, sha256) {
-    const { score, verdict, exif_flags } = data;
+    const { score, verdict, exif_flags, exif_values = {} } = data;
     const metaIntegrity = computeMetadataIntegrity(exif_flags);
     const compressionAnomaly = computeCompressionAnomaly(score);
     const verdictClass = getVerdictClass(verdict);
@@ -165,7 +166,7 @@ function renderResults(data, file, sha256) {
 
     saveToHistory(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags);
 
-    const exifRows = buildExifRows(exif_flags, sha256, file);
+    const exifRows = buildExifRows(exif_flags, sha256, file, exif_values);
 
     const metaColor = metaIntegrity >= 70 ? "var(--green)" : metaIntegrity >= 40 ? "var(--amber)" : "var(--red)";
     const compColor = getScoreColor(compressionAnomaly);
@@ -228,7 +229,7 @@ function renderResults(data, file, sha256) {
         <button class="btn-big secondary" id="btn-new">New Scan</button>
         <button class="btn-big secondary" id="btn-add-case">Add to Case</button>
       </div>
-      <button class="btn-big secondary" id="btn-reasoning" style="border-color:rgba(0,194,168,0.3);color:var(--teal)">🧠 Forensic Reasoning</button>
+      <button class="btn-big secondary" id="btn-reasoning" style="border-color:rgba(0,194,168,0.3);color:var(--teal)">Forensic Reasoning</button>
     </div>
   `;
 
@@ -251,7 +252,7 @@ function renderResults(data, file, sha256) {
     currentResult = { data, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, reasoning };
 }
 
-function buildExifRows(exif_flags, sha256, file) {
+function buildExifRows(exif_flags, sha256, file, exif_values = {}) {
     const noExif = exif_flags.includes("No EXIF data found");
     const shortHash = sha256.slice(0, 8) + "..." + sha256.slice(-8);
 
@@ -264,15 +265,21 @@ function buildExifRows(exif_flags, sha256, file) {
     const rows = [
         {
             key: "Camera Model",
-            val: isFlagged("no camera") ? `<span style="color:var(--white-3)">— missing<span class="flag">FLAG</span></span>` : `<span style="color:var(--white)">Present</span>`
+            val: isFlagged("no camera")
+                ? `<span style="color:var(--white-3)">— not found<span class="flag">FLAG</span></span>`
+                : `<span style="color:var(--white)">${exif_values.camera || "Present"}</span>`
         },
         {
             key: "GPS Data",
-            val: isFlagged("no gps") ? `<span style="color:var(--white-3)">— stripped<span class="flag">FLAG</span></span>` : `<span style="color:var(--white)">Present</span>`
+            val: isFlagged("no gps")
+                ? `<span style="color:var(--white-3)">— not found<span class="flag">FLAG</span></span>`
+                : `<span style="color:var(--white);font-size:11px;font-family:var(--mono)">${exif_values.gps || "Present"}</span>`
         },
         {
             key: "Timestamp",
-            val: isFlagged("no original capture") ? `<span style="color:var(--white-3)">— missing<span class="flag">FLAG</span></span>` : `<span style="color:var(--white)">Present</span>`
+            val: isFlagged("no original capture")
+                ? `<span style="color:var(--white-3)">— not found<span class="flag">FLAG</span></span>`
+                : `<span style="color:var(--white);font-size:11px;font-family:var(--mono)">${exif_values.timestamp || "Present"}</span>`
         },
         {
             key: "Software",
@@ -615,6 +622,7 @@ async function addScanToCase(caseObj, data, file, sha256, metaIntegrity, compres
         score: data.score,
         verdict: data.verdict,
         exif_flags,
+        exif_values: data.exif_values || {},
         sha256,
         metaIntegrity,
         compressionAnomaly,
@@ -637,7 +645,7 @@ function showCaseSuccess(caseName) {
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
 }
-// ── Info modal ────────────────────────────────────────────────
+// Info modal
 const infoBtn = document.getElementById("info-btn");
 const infoOverlay = document.getElementById("info-overlay");
 const infoClose = document.getElementById("info-close");

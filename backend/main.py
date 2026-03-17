@@ -35,5 +35,6 @@ async def analyze(file: UploadFile = File(...)):
     return {
         "score": detection_result["score"],
         "verdict": detection_result["verdict"],
-        "exif_flags": exif_result
+        "exif_flags": exif_result["flags"],
+        "exif_values": exif_result["values"]
     }
