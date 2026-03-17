@@ -70,6 +70,25 @@
         <div class="modal" id="modal-content"></div>
     </div>
 
+    <!-- Delete confirm overlay -->
+    <div class="modal-overlay" id="delete-overlay">
+        <div class="modal confirm-modal">
+            <div class="modal-header">
+                <div>
+                    <div class="modal-title">Delete Case</div>
+                    <div class="modal-meta">This cannot be undone</div>
+                </div>
+            </div>
+            <div style="padding:20px 24px;font-size:13px;color:var(--white-2);line-height:1.6;">
+                Are you sure you want to delete <strong id="delete-case-name"></strong> and all its scans?
+            </div>
+            <div style="padding:0 24px 24px;display:flex;gap:10px;">
+                <button class="btn-big secondary" id="delete-cancel" style="flex:1">Cancel</button>
+                <button class="btn-big primary" id="delete-confirm" style="flex:1">Delete</button>
+            </div>
+        </div>
+    </div>
+
     <script src="cases.js"></script>
 
 </body>

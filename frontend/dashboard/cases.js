@@ -212,12 +212,37 @@ function closeDetail() {
     document.getElementById("modal-overlay").classList.remove("open");
 }
 
+let pendingDeleteIndex = null;
+
 function deleteCase(index) {
     const cases = loadCases();
-    cases.splice(index, 1);
-    saveCases(cases);
-    renderCases();
+    document.getElementById("delete-case-name").textContent = `"${cases[index].name}"`;
+    pendingDeleteIndex = index;
+    document.getElementById("delete-overlay").classList.add("open");
 }
+
+document.getElementById("delete-cancel").addEventListener("click", () => {
+    document.getElementById("delete-overlay").classList.remove("open");
+    pendingDeleteIndex = null;
+});
+
+document.getElementById("delete-confirm").addEventListener("click", () => {
+    if (pendingDeleteIndex !== null) {
+        const cases = loadCases();
+        cases.splice(pendingDeleteIndex, 1);
+        saveCases(cases);
+        pendingDeleteIndex = null;
+    }
+    document.getElementById("delete-overlay").classList.remove("open");
+    renderCases();
+});
+
+document.getElementById("delete-overlay").addEventListener("click", (e) => {
+    if (e.target === document.getElementById("delete-overlay")) {
+        document.getElementById("delete-overlay").classList.remove("open");
+        pendingDeleteIndex = null;
+    }
+});
 
 // Filter buttons
 document.querySelectorAll(".filter-btn").forEach(btn => {
