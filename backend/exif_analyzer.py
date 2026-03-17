@@ -17,7 +17,6 @@ def _parse_coord(value):
 
 def _get_gps_string(gps_info):
     try:
-        # Decode numeric keys to string keys
         decoded = {GPSTAGS.get(k, k): v for k, v in gps_info.items()}
 
         lat_val = decoded.get("GPSLatitude")
@@ -74,13 +73,7 @@ def analyze_exif(image_path: str) -> dict:
 
         # GPS
         raw_gps = tag_names.get("GPSInfo")
-        if raw_gps:
-            gps_str = _get_gps_string(raw_gps)
-            if gps_str:
-                values["gps"] = gps_str
-            else:
-                values["gps"] = "Present"
-        else:
+        if not raw_gps:
             flags.append("No GPS metadata")
 
         # Software

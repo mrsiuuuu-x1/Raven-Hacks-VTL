@@ -273,7 +273,7 @@ function buildExifRows(exif_flags, sha256, file, exif_values = {}) {
             key: "GPS Data",
             val: isFlagged("no gps")
                 ? `<span style="color:var(--white-3)">— not found<span class="flag">FLAG</span></span>`
-                : `<span style="color:var(--white);font-size:11px;font-family:var(--mono)">${exif_values.gps || "Present"}</span>`
+                : `<span style="color:var(--white)">Present</span>`
         },
         {
             key: "Timestamp",
@@ -645,7 +645,7 @@ function showCaseSuccess(caseName) {
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
 }
-// Info modal
+// ── Info modal ────────────────────────────────────────────────
 const infoBtn = document.getElementById("info-btn");
 const infoOverlay = document.getElementById("info-overlay");
 const infoClose = document.getElementById("info-close");
@@ -662,7 +662,7 @@ if (infoOverlay) {
     });
 }
 
-// Forensic Reasoning
+// ── Forensic Reasoning ───────────────────────────────────────
 function generateForensicReasoning(score, verdict, metaIntegrity, compressionAnomaly, exif_flags, file) {
     const noExif = exif_flags.includes("No EXIF data found");
     const noCamera = noExif || exif_flags.some(f => f.toLowerCase().includes("no camera"));
