@@ -200,6 +200,7 @@ function openScanDetail(caseIndex, scanIndex) {
             </div>
         </div>
         ${scan.notes ? `<div class="meta-block"><div class="block-label">Detective Notes</div><div style="padding:8px 0;font-size:13px;color:var(--white-2);line-height:1.6">${scan.notes}</div></div>` : ""}
+        ${scan.reasoning ? `<div class="meta-block"><div class="block-label">Forensic Reasoning</div><div style="padding:8px 0;">${scan.reasoning.split("\n\n").map(p => `<p style="font-size:12px;color:var(--white-2);line-height:1.75;margin-bottom:10px;">${p}</p>`).join("")}</div></div>` : ""}
         <div class="action-block">
             <button class="btn-big secondary" onclick="closeDetail()">Close</button>
         </div>

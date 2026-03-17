@@ -228,6 +228,7 @@ function renderResults(data, file, sha256) {
         <button class="btn-big secondary" id="btn-new">New Scan</button>
         <button class="btn-big secondary" id="btn-add-case">Add to Case</button>
       </div>
+      <button class="btn-big secondary" id="btn-reasoning" style="border-color:rgba(0,194,168,0.3);color:var(--teal)">🧠 Forensic Reasoning</button>
     </div>
   `;
 
@@ -240,11 +241,14 @@ function renderResults(data, file, sha256) {
         URL.revokeObjectURL(objectUrl);
     };
 
+    const reasoning = generateForensicReasoning(score, verdict, metaIntegrity, compressionAnomaly, exif_flags, file);
+
     document.getElementById("btn-new").addEventListener("click", resetUI);
     document.getElementById("btn-export").addEventListener("click", () => exportPDF(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags));
-    document.getElementById("btn-add-case").addEventListener("click", () => openCaseDropdown(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags));
+    document.getElementById("btn-add-case").addEventListener("click", () => openCaseDropdown(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, reasoning));
+    document.getElementById("btn-reasoning").addEventListener("click", () => showReasoningPopup(reasoning));
 
-    currentResult = { data, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags };
+    currentResult = { data, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, reasoning };
 }
 
 function buildExifRows(exif_flags, sha256, file) {
@@ -473,7 +477,7 @@ function saveCases(cases) {
     localStorage.setItem(CASES_KEY, JSON.stringify(cases));
 }
 
-function openCaseDropdown(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags) {
+function openCaseDropdown(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, reasoning = "") {
     const existing = document.getElementById("case-overlay");
     if (existing) existing.remove();
 
@@ -562,7 +566,7 @@ function openCaseDropdown(data, file, sha256, metaIntegrity, compressionAnomaly,
             notes: "",
             scans: []
         };
-        await addScanToCase(newCase, data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, notes);
+        await addScanToCase(newCase, data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, notes, reasoning);
         cases.push(newCase);
         saveCases(cases);
         overlay.remove();
@@ -574,7 +578,7 @@ function openCaseDropdown(data, file, sha256, metaIntegrity, compressionAnomaly,
             const index = parseInt(item.dataset.index);
             const notes = document.getElementById("case-notes").value.trim();
             const cases = loadCases();
-            await addScanToCase(cases[index], data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, notes);
+            await addScanToCase(cases[index], data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, notes, reasoning);
             saveCases(cases);
             overlay.remove();
             showCaseSuccess(cases[index].name);
@@ -602,7 +606,7 @@ async function generateThumbnail(file) {
     });
 }
 
-async function addScanToCase(caseObj, data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, notes) {
+async function addScanToCase(caseObj, data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, notes, reasoning = "") {
     const thumbnail = await generateThumbnail(file);
     caseObj.scans.push({
         filename: file.name,
@@ -616,6 +620,7 @@ async function addScanToCase(caseObj, data, file, sha256, metaIntegrity, compres
         compressionAnomaly,
         analyzedAt,
         notes: notes || "",
+        reasoning: reasoning || "",
         thumbnail
     });
 }
@@ -631,4 +636,111 @@ function showCaseSuccess(caseName) {
     toast.innerHTML = `<span style="color:var(--teal)">✓</span> Added to <strong>${caseName}</strong>`;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
+}
+// ── Info modal ────────────────────────────────────────────────
+const infoBtn = document.getElementById("info-btn");
+const infoOverlay = document.getElementById("info-overlay");
+const infoClose = document.getElementById("info-close");
+
+if (infoBtn) {
+    infoBtn.addEventListener("click", () => infoOverlay.classList.add("open"));
+}
+if (infoClose) {
+    infoClose.addEventListener("click", () => infoOverlay.classList.remove("open"));
+}
+if (infoOverlay) {
+    infoOverlay.addEventListener("click", (e) => {
+        if (e.target === infoOverlay) infoOverlay.classList.remove("open");
+    });
+}
+
+// Forensic Reasoning
+function generateForensicReasoning(score, verdict, metaIntegrity, compressionAnomaly, exif_flags, file) {
+    const noExif = exif_flags.includes("No EXIF data found");
+    const noCamera = noExif || exif_flags.some(f => f.toLowerCase().includes("no camera"));
+    const noGPS = noExif || exif_flags.some(f => f.toLowerCase().includes("no gps"));
+    const noTimestamp = noExif || exif_flags.some(f => f.toLowerCase().includes("no original capture"));
+    const hasSoftware = exif_flags.some(f => f.startsWith("Edited with software:"));
+    const softwareVal = exif_flags.find(f => f.startsWith("Edited with software:"))?.replace("Edited with software: ", "");
+    const ext = file.name.split(".").pop().toUpperCase();
+    let lines = [];
+
+    if (score >= 70) {
+        lines.push(`The AI detection model assigned a high synthetic probability of ${score}%, strongly suggesting this image was generated by a diffusion or GAN-based model rather than captured by a physical camera.`);
+    } else if (score >= 30) {
+        lines.push(`The AI detection model returned a moderate probability of ${score}%, indicating possible AI generation or significant post-processing. The result is inconclusive and should be weighed alongside other signals.`);
+    } else {
+        lines.push(`The AI detection model assigned a low synthetic probability of ${score}%, suggesting the image is likely of organic camera origin. However, a low score alone does not confirm authenticity.`);
+    }
+
+    if (noExif) {
+        lines.push(`No EXIF metadata was found in the file. AI-generated images and screenshots typically lack embedded camera metadata entirely, which is consistent with synthetic origin.`);
+    } else {
+        let metaIssues = [];
+        if (noCamera) metaIssues.push("camera make/model");
+        if (noTimestamp) metaIssues.push("original capture timestamp");
+        if (noGPS) metaIssues.push("GPS coordinates");
+        if (metaIssues.length > 0) {
+            lines.push(`The following metadata fields are absent: ${metaIssues.join(", ")}. Missing capture metadata on a JPEG is a forensic flag, as authentic camera images typically embed this information at the point of capture.`);
+        } else {
+            lines.push(`The image contains intact camera metadata including device model, timestamp, and location data, which is consistent with a genuine camera capture.`);
+        }
+        if (hasSoftware) {
+            lines.push(`The EXIF Software field records post-processing through "${softwareVal}", indicating the image was opened or modified in an editing application after capture.`);
+        }
+    }
+
+    if (compressionAnomaly >= 70) {
+        lines.push(`Compression analysis reveals a high anomaly score of ${compressionAnomaly}/100. The file's DCT coefficient distribution deviates significantly from expected camera output, which may indicate re-encoding or synthetic generation artifacts.`);
+    } else if (compressionAnomaly >= 30) {
+        lines.push(`Compression analysis shows moderate anomalies (${compressionAnomaly}/100), suggesting possible re-saving or editing but not definitively indicative of AI generation.`);
+    } else {
+        lines.push(`Compression patterns appear consistent with standard camera output (${compressionAnomaly}/100), showing no significant encoding anomalies.`);
+    }
+
+    if (ext === "PNG") {
+        lines.push(`The file is a PNG, a lossless format commonly used when saving AI-generated images to avoid JPEG compression artifacts. Most camera devices natively produce JPEG files.`);
+    }
+
+    if (score >= 70 && metaIntegrity <= 25) {
+        lines.push(`Overall: Multiple converging signals — high AI probability, absent metadata, and compression anomalies — indicate a high likelihood of synthetic origin. This image warrants further investigation before use as evidence.`);
+    } else if (score < 30 && metaIntegrity >= 70) {
+        lines.push(`Overall: The combination of a low AI probability score and intact metadata suggests this image is likely authentic. No major forensic flags were detected.`);
+    } else {
+        lines.push(`Overall: The signals present a mixed profile. Exercise caution and corroborate with additional investigative methods before drawing conclusions about authenticity.`);
+    }
+
+    return lines.join("\n\n");
+}
+
+function showReasoningPopup(reasoning) {
+    const existing = document.getElementById("reasoning-overlay");
+    if (existing) existing.remove();
+
+    const overlay = document.createElement("div");
+    overlay.id = "reasoning-overlay";
+    overlay.style.cssText = `
+        position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:300;
+        display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);
+    `;
+    overlay.innerHTML = `
+        <div style="background:var(--panel);border:1px solid rgba(0,194,168,0.25);border-radius:16px;width:520px;max-height:80vh;overflow:hidden;display:flex;flex-direction:column;">
+            <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <div style="font-size:11px;letter-spacing:0.12em;color:var(--teal);font-family:var(--mono);text-transform:uppercase;margin-bottom:4px;">AI Analysis</div>
+                    <div style="font-size:15px;font-weight:600;letter-spacing:-0.01em;">Forensic Reasoning</div>
+                </div>
+                <button id="close-reasoning" style="background:none;border:none;color:var(--white-3);font-size:20px;cursor:pointer;padding:4px;line-height:1;">×</button>
+            </div>
+            <div style="padding:20px 24px;overflow-y:auto;flex:1;">
+                ${reasoning.split("\n\n").map(p => `<p style="font-size:13px;color:var(--white-2);line-height:1.75;margin-bottom:14px;">${p}</p>`).join("")}
+            </div>
+            <div style="padding:12px 24px;border-top:1px solid var(--border);">
+                <div style="font-size:10px;color:var(--white-3);font-family:var(--mono);">Results are probabilistic. Use alongside other investigative methods.</div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    document.getElementById("close-reasoning").addEventListener("click", () => overlay.remove());
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
 }
