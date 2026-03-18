@@ -1,4 +1,4 @@
-import { signUp, signIn, getUser } from "./supabase.js";
+import { signUp, signIn, getUser, signOut } from "./supabase.js";
 
 // Redirect if already logged in
 getUser().then(user => {
@@ -157,7 +157,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            showToast('Account created! Check your email to confirm.', 'success');
+            // Immediately sign out to prevent the auto-login behavior
+            await signOut();
+
+            showToast('Account created! Please sign in.', 'success');
+            
+            // Visually switch over to the Login Form
+            signupForm.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+            
+            // Pre-fill the email they just used to save them some typing
+            document.getElementById('loginEmail').value = email;
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('loginPassword').focus();
         });
     }
 
