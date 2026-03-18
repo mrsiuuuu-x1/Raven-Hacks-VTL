@@ -1,4 +1,4 @@
-import { signUp, signIn, getUser } from "./supabase.js";
+import { signUp, signIn, getUser, signOut, isUsernameTaken } from "./supabase.js";
 
 // Redirect if already logged in
 // ── Commented out for local Live Server testing ──
@@ -151,6 +151,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!valid) return;
 
             setLoading('submitBtn', 'btnSpinner', true);
+
+            const taken = await isUsernameTaken(username);
+            if (taken) {
+                setLoading('submitBtn', 'btnSpinner', false);
+                setError('username', 'err-username', 'Username is already taken.');
+                return;
+            }
+            
             const { error } = await signUp(email, password, username);
             setLoading('submitBtn', 'btnSpinner', false);
 
@@ -159,7 +167,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            showToast('Account created! Check your email to confirm.', 'success');
+            // Immediately sign out to prevent the auto-login behavior
+            await signOut();
+
+            showToast('Account created! Please sign in.', 'success');
+            
+            // Visually switch over to the Login Form
+            signupForm.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+            
+            // Pre-fill the email they just used to save them some typing
+            document.getElementById('loginEmail').value = email;
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('loginPassword').focus();
         });
     }
 
