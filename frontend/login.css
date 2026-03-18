@@ -1,8 +1,4 @@
-/* ─────────────────────────────────────────
-   Null!fy · login.css
-───────────────────────────────────────── */
-
-/* ── Reset ── */
+/* Reset */
 *,
 *::before,
 *::after {
@@ -11,7 +7,7 @@
     padding: 0;
 }
 
-/* ── Design Tokens ── */
+/* Design Tokens */
 :root {
     --bg-deep: #060c0b;
     --bg-panel-l: #050e0d;
@@ -37,7 +33,7 @@
     --radius-lg: 14px;
 }
 
-/* ── Base ── */
+/* Base */
 html,
 body {
     height: 100%;
@@ -51,18 +47,12 @@ body {
     min-height: 100vh;
 }
 
-/* ─────────────────────────────────────────
-   LAYOUT
-───────────────────────────────────────── */
+/* Layout */
 .login-wrapper {
     display: grid;
     grid-template-columns: 1fr 1fr;
     min-height: 100vh;
 }
-
-/* ─────────────────────────────────────────
-   SHARED PANEL PIECES
-───────────────────────────────────────── */
 
 /* Grid overlay */
 .grid-bg {
@@ -102,9 +92,6 @@ body {
     filter: blur(28px);
 }
 
-/* ─────────────────────────────────────────
-   LEFT — BRANDING PANEL
-───────────────────────────────────────── */
 .branding-panel {
     position: relative;
     background: var(--bg-panel-l);
@@ -203,9 +190,6 @@ body {
     text-transform: uppercase;
 }
 
-/* ─────────────────────────────────────────
-   RIGHT — FORM PANEL
-───────────────────────────────────────── */
 .form-panel {
     position: relative;
     background: var(--bg-deep);
@@ -223,7 +207,7 @@ body {
     max-width: 360px;
 }
 
-/* ── Form Header ── */
+/* Form Header */
 .form-header {
     margin-bottom: 1.75rem;
 }
@@ -241,7 +225,7 @@ body {
     color: var(--text-muted);
 }
 
-/* ── Auth Forms ── */
+/* Auth Forms */
 .auth-form {
     display: flex;
     flex-direction: column;
@@ -253,7 +237,7 @@ body {
     display: none;
 }
 
-/* ── Field Group ── */
+/* Field Group */
 .field-group {
     display: flex;
     flex-direction: column;
@@ -296,7 +280,7 @@ body {
     box-shadow: 0 0 0 3px rgba(224, 85, 85, 0.08);
 }
 
-/* ── Password wrap ── */
+/* Password wrap */
 .password-wrap {
     position: relative;
     display: flex;
@@ -329,7 +313,7 @@ body {
     height: 15px;
 }
 
-/* ── Password Strength ── */
+/* Password Strength */
 .pw-strength-wrap {
     height: 2px;
     background: rgba(0, 229, 204, 0.08);
@@ -354,7 +338,7 @@ body {
     display: block;
 }
 
-/* ── Field Error ── */
+/* Field Error */
 .field-error {
     font-size: 10px;
     color: #e05555;
@@ -363,7 +347,7 @@ body {
     display: block;
 }
 
-/* ── Primary Button ── */
+/* Primary Button */
 .btn-primary {
     width: 100%;
     background: var(--accent);
@@ -421,7 +405,7 @@ body {
     opacity: 0.7;
 }
 
-/* ── Divider ── */
+/* Divider */
 .divider {
     display: flex;
     align-items: center;
@@ -443,7 +427,7 @@ body {
     letter-spacing: 1px;
 }
 
-/* ── Switch Link ── */
+/* Switch Link */
 .switch-link {
     text-align: center;
     font-size: 11px;
@@ -460,9 +444,6 @@ body {
     opacity: 0.75;
 }
 
-/* ─────────────────────────────────────────
-   TOAST
-───────────────────────────────────────── */
 .toast {
     position: fixed;
     bottom: 1.75rem;
@@ -497,9 +478,7 @@ body {
     color: #e05555;
 }
 
-/* ─────────────────────────────────────────
-   ANIMATIONS
-───────────────────────────────────────── */
+/* ANIMATIONS */
 @keyframes fadeUp {
     from {
         opacity: 0;
@@ -518,9 +497,6 @@ body {
     }
 }
 
-/* ─────────────────────────────────────────
-   RESPONSIVE — TABLET
-───────────────────────────────────────── */
 @media (max-width: 900px) {
     .branding-panel {
         padding: 2.25rem 2rem;
@@ -535,18 +511,12 @@ body {
     }
 }
 
-/* ─────────────────────────────────────────
-   RESPONSIVE — MOBILE
-   Split → stacked: branding becomes
-   a compact top banner, form below
-───────────────────────────────────────── */
 @media (max-width: 768px) {
     .login-wrapper {
         grid-template-columns: 1fr;
         grid-template-rows: auto 1fr;
     }
 
-    /* Branding shrinks to a header strip */
     .branding-panel {
         border-right: none;
         border-bottom: 1px solid var(--border-panel);
@@ -567,7 +537,6 @@ body {
         font-size: 11px;
     }
 
-    /* Hide feature list on small screens to keep header tight */
     .feature-list {
         display: none;
     }
@@ -576,7 +545,6 @@ body {
         display: none;
     }
 
-    /* Glow scales down */
     .glow--tl {
         width: 260px;
         height: 260px;
@@ -584,7 +552,6 @@ body {
         left: -80px;
     }
 
-    /* Form panel fills remaining space */
     .form-panel {
         padding: 2rem 1.5rem;
         align-items: flex-start;

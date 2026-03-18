@@ -1,7 +1,6 @@
-
 document.addEventListener('DOMContentLoaded', () => {
 
-    // ── Element refs ──
+    // Element refs
     const signupForm = document.getElementById('signupForm');
     const loginForm = document.getElementById('loginForm');
     const switchToLogin = document.getElementById('switchToLogin');
@@ -142,13 +141,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (!valid) return;
-
-        // UI-only: simulate async action
         setLoading('submitBtn', 'btnSpinner', true);
         await simulateDelay(1200);
         setLoading('submitBtn', 'btnSpinner', false);
-
-        // TODO: replace with → const { data, error } = await signUp(email, password);
         showToast('Account created! Check your email to confirm.', 'success');
     });
 
@@ -174,13 +169,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (!valid) return;
-
-        // UI-only: simulate async action
         setLoading('loginBtn', 'loginSpinner', true);
         await simulateDelay(1200);
         setLoading('loginBtn', 'loginSpinner', false);
-
-        // TODO: replace with → const { data, error } = await signIn(email, password);
         showToast('Signed in! Redirecting...', 'success');
     });
 
