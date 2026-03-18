@@ -1,4 +1,4 @@
-import { signUp, signIn, getUser, signOut } from "./supabase.js";
+import { signUp, signIn, getUser, signOut, isUsernameTaken } from "./supabase.js";
 
 // Redirect if already logged in
 getUser().then(user => {
@@ -149,6 +149,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!valid) return;
 
             setLoading('submitBtn', 'btnSpinner', true);
+
+            const taken = await isUsernameTaken(username);
+            if (taken) {
+                setLoading('submitBtn', 'btnSpinner', false);
+                setError('username', 'err-username', 'Username is already taken.');
+                return;
+            }
+            
             const { error } = await signUp(email, password, username);
             setLoading('submitBtn', 'btnSpinner', false);
 

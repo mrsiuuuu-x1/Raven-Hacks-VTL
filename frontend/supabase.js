@@ -150,3 +150,12 @@ export async function getCaseScans(caseId) {
         .order("created_at", { ascending: true });
     return { data: data || [], error };
 }
+
+export async function isUsernameTaken(username) {
+    const { data } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', username)
+        .maybeSingle();
+    return !!data;
+}
