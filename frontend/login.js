@@ -1,6 +1,11 @@
-document.addEventListener('DOMContentLoaded', () => {
+import { signUp, signIn, getUser } from "./supabase.js";
 
-    // Element refs
+// Redirect if already logged in
+getUser().then(user => {
+    if (user) window.location.href = "./dashboard/index.html";
+});
+
+document.addEventListener('DOMContentLoaded', () => {
     const signupForm = document.getElementById('signupForm');
     const loginForm = document.getElementById('loginForm');
     const switchToLogin = document.getElementById('switchToLogin');
@@ -45,28 +50,30 @@ document.addEventListener('DOMContentLoaded', () => {
         { label: 'Strong', color: '#00e5cc', pct: 100 },
     ];
 
-    pwInput.addEventListener('input', () => {
-        const val = pwInput.value;
-        let score = 0;
-        if (val.length >= 8) score++;
-        if (/[A-Z]/.test(val)) score++;
-        if (/[0-9]/.test(val)) score++;
-        if (/[^A-Za-z0-9]/.test(val)) score++;
+    if (pwInput) {
+        pwInput.addEventListener('input', () => {
+            const val = pwInput.value;
+            let score = 0;
+            if (val.length >= 8) score++;
+            if (/[A-Z]/.test(val)) score++;
+            if (/[0-9]/.test(val)) score++;
+            if (/[^A-Za-z0-9]/.test(val)) score++;
 
-        if (val.length === 0) {
-            pwBar.style.width = '0%';
-            pwBar.style.background = 'transparent';
-            pwLabel.textContent = '';
-            pwLabel.style.color = '';
-            return;
-        }
+            if (val.length === 0) {
+                pwBar.style.width = '0%';
+                pwBar.style.background = 'transparent';
+                pwLabel.textContent = '';
+                pwLabel.style.color = '';
+                return;
+            }
 
-        const level = strengthLevels[score - 1] || strengthLevels[0];
-        pwBar.style.width = level.pct + '%';
-        pwBar.style.background = level.color;
-        pwLabel.textContent = level.label;
-        pwLabel.style.color = level.color;
-    });
+            const level = strengthLevels[score - 1] || strengthLevels[0];
+            pwBar.style.width = level.pct + '%';
+            pwBar.style.background = level.color;
+            pwLabel.textContent = level.label;
+            pwLabel.style.color = level.color;
+        });
+    }
 
     function setError(fieldId, errId, message) {
         const input = document.getElementById(fieldId);
@@ -85,7 +92,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let toastTimer;
-
     function showToast(message, type = 'error') {
         clearTimeout(toastTimer);
         toast.textContent = message;
@@ -97,7 +103,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setLoading(btnId, spinnerId, loading) {
         const btn = document.getElementById(btnId);
-        const spinner = document.getElementById(spinnerId);
         if (!btn) return;
         btn.disabled = loading;
         if (loading) {
@@ -107,76 +112,91 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    signupForm.addEventListener('submit', async e => {
-        e.preventDefault();
-        clearErrors();
+    if (signupForm) {
+        signupForm.addEventListener('submit', async e => {
+            e.preventDefault();
+            clearErrors();
 
-        const username = document.getElementById('username').value.trim();
-        const email = document.getElementById('email').value.trim();
-        const password = document.getElementById('password').value;
-        let valid = true;
+            const username = document.getElementById('username').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            let valid = true;
 
-        if (!username) {
-            setError('username', 'err-username', 'Username is required.');
-            valid = false;
-        } else if (username.length < 3) {
-            setError('username', 'err-username', 'Must be at least 3 characters.');
-            valid = false;
-        }
+            if (!username) {
+                setError('username', 'err-username', 'Username is required.');
+                valid = false;
+            } else if (username.length < 3) {
+                setError('username', 'err-username', 'Must be at least 3 characters.');
+                valid = false;
+            }
 
-        if (!email) {
-            setError('email', 'err-email', 'Email is required.');
-            valid = false;
-        } else if (!isValidEmail(email)) {
-            setError('email', 'err-email', 'Enter a valid email address.');
-            valid = false;
-        }
+            if (!email) {
+                setError('email', 'err-email', 'Email is required.');
+                valid = false;
+            } else if (!isValidEmail(email)) {
+                setError('email', 'err-email', 'Enter a valid email address.');
+                valid = false;
+            }
 
-        if (!password) {
-            setError('password', 'err-password', 'Password is required.');
-            valid = false;
-        } else if (password.length < 8) {
-            setError('password', 'err-password', 'Must be at least 8 characters.');
-            valid = false;
-        }
+            if (!password) {
+                setError('password', 'err-password', 'Password is required.');
+                valid = false;
+            } else if (password.length < 8) {
+                setError('password', 'err-password', 'Must be at least 8 characters.');
+                valid = false;
+            }
 
-        if (!valid) return;
-        setLoading('submitBtn', 'btnSpinner', true);
-        await simulateDelay(1200);
-        setLoading('submitBtn', 'btnSpinner', false);
-        showToast('Account created! Check your email to confirm.', 'success');
-    });
+            if (!valid) return;
 
-    loginForm.addEventListener('submit', async e => {
-        e.preventDefault();
-        clearErrors();
+            setLoading('submitBtn', 'btnSpinner', true);
+            const { error } = await signUp(email, password, username);
+            setLoading('submitBtn', 'btnSpinner', false);
 
-        const email = document.getElementById('loginEmail').value.trim();
-        const password = document.getElementById('loginPassword').value;
-        let valid = true;
+            if (error) {
+                showToast(error.message || 'Sign up failed. Try again.', 'error');
+                return;
+            }
 
-        if (!email) {
-            setError('loginEmail', 'err-loginEmail', 'Email is required.');
-            valid = false;
-        } else if (!isValidEmail(email)) {
-            setError('loginEmail', 'err-loginEmail', 'Enter a valid email address.');
-            valid = false;
-        }
-
-        if (!password) {
-            setError('loginPassword', 'err-loginPassword', 'Password is required.');
-            valid = false;
-        }
-
-        if (!valid) return;
-        setLoading('loginBtn', 'loginSpinner', true);
-        await simulateDelay(1200);
-        setLoading('loginBtn', 'loginSpinner', false);
-        showToast('Signed in! Redirecting...', 'success');
-    });
-
-    function simulateDelay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
+            showToast('Account created! Check your email to confirm.', 'success');
+        });
     }
 
+    if (loginForm) {
+        loginForm.addEventListener('submit', async e => {
+            e.preventDefault();
+            clearErrors();
+
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            let valid = true;
+
+            if (!email) {
+                setError('loginEmail', 'err-loginEmail', 'Email is required.');
+                valid = false;
+            } else if (!isValidEmail(email)) {
+                setError('loginEmail', 'err-loginEmail', 'Enter a valid email address.');
+                valid = false;
+            }
+
+            if (!password) {
+                setError('loginPassword', 'err-loginPassword', 'Password is required.');
+                valid = false;
+            }
+
+            if (!valid) return;
+            setLoading('loginBtn', 'loginSpinner', true);
+            const { error } = await signIn(email, password);
+            setLoading('loginBtn', 'loginSpinner', false);
+
+            if (error) {
+                showToast(error.message || 'Invalid email or password.', 'error');
+                return;
+            }
+
+            showToast('Signed in! Redirecting...', 'success');
+            setTimeout(() => {
+                window.location.href = "./dashboard/index.html";
+            }, 1000);
+        });
+    }
 });

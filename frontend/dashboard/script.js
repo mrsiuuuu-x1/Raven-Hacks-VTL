@@ -1,27 +1,29 @@
-const API_BASE = "https://mrsiuuuu-x1-nullify-backend.hf.space";
-const STORAGE_KEY = "nullify_scan_history";
+import { saveScan, getCases, createCase, addScanToCase as supabaseAddScanToCase, getUser } from "../supabase.js";
 
-function saveToHistory(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags) {
+const API_BASE = "https://mrsiuuuu-x1-nullify-backend.hf.space";
+
+// Route Guard
+getUser().then(user => {
+    if (!user) window.location.href = "../login.html";
+});
+
+async function saveToHistory(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags) {
     const entry = {
         filename: file.name,
-        fileSize: formatFileSize(file.size),
+        fileSize: file.size,
         ext: file.name.split(".").pop().toUpperCase(),
         score: data.score,
         verdict: data.verdict,
         exif_flags,
         exif_values: data.exif_values || {},
         sha256,
-        metaIntegrity,
-        compressionAnomaly,
+        metaIntegrity,       
+        compressionAnomaly,  
         analyzedAt
     };
-    try {
-        const history = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-        history.push(entry);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-    } catch (e) {
-        console.warn("Could not save to history:", e);
-    }
+    
+    const { error } = await saveScan(entry);
+    if (error) console.error("Could not save to history:", error);
 }
 
 const dropZone = document.getElementById("drop-zone");
@@ -32,29 +34,33 @@ const rightPanel = document.getElementById("right-panel");
 let currentResult = null;
 let currentFile = null;
 
-browseBtn.addEventListener("click", () => fileInput.click());
+if(browseBtn) browseBtn.addEventListener("click", () => fileInput.click());
 
-dropZone.addEventListener("click", (e) => {
-    if (e.target !== browseBtn) fileInput.click();
-});
+if(dropZone) {
+    dropZone.addEventListener("click", (e) => {
+        if (e.target !== browseBtn) fileInput.click();
+    });
 
-fileInput.addEventListener("change", () => {
-    if (fileInput.files[0]) handleFile(fileInput.files[0]);
-});
+    dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drag-over");
+    });
 
-dropZone.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    dropZone.classList.add("drag-over");
-});
+    dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
 
-dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+    dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("drag-over");
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith("image/")) handleFile(file);
+    });
+}
 
-dropZone.addEventListener("drop", (e) => {
-    e.preventDefault();
-    dropZone.classList.remove("drag-over");
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith("image/")) handleFile(file);
-});
+if(fileInput) {
+    fileInput.addEventListener("change", () => {
+        if (fileInput.files[0]) handleFile(fileInput.files[0]);
+    });
+}
 
 async function computeSHA256(file) {
     const buffer = await file.arrayBuffer();
@@ -107,6 +113,7 @@ function renderHeatmap(canvas, aiScore) {
     const ctx = canvas.getContext("2d");
     const w = canvas.offsetWidth;
     const h = canvas.offsetHeight;
+    if(w === 0 || h === 0) return;
     canvas.width = w;
     canvas.height = h;
     ctx.clearRect(0, 0, w, h);
@@ -152,104 +159,6 @@ function showAnalyzing() {
       <div class="analyzing-sub">Running AI detection + EXIF scan</div>
     </div>
   `;
-}
-
-function renderResults(data, file, sha256) {
-    const { score, verdict, exif_flags, exif_values = {} } = data;
-    const metaIntegrity = computeMetadataIntegrity(exif_flags);
-    const compressionAnomaly = computeCompressionAnomaly(score);
-    const verdictClass = getVerdictClass(verdict);
-    const analyzedAt = formatDate(new Date());
-    const fileSize = formatFileSize(file.size);
-    const ext = file.name.split(".").pop().toUpperCase();
-    const flagCount = exif_flags.filter(f => !f.startsWith("No suspicious")).length;
-
-    saveToHistory(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags);
-
-    const exifRows = buildExifRows(exif_flags, sha256, file, exif_values);
-
-    const metaColor = metaIntegrity >= 70 ? "var(--green)" : metaIntegrity >= 40 ? "var(--amber)" : "var(--red)";
-    const compColor = getScoreColor(compressionAnomaly);
-
-    rightPanel.innerHTML = `
-    <div class="results-header">
-      <div class="results-eyebrow">Analysis Result</div>
-      <div class="results-filename">${file.name}</div>
-      <div class="results-meta-line">${fileSize} · ${ext} · Analyzed ${analyzedAt}</div>
-    </div>
-    <div class="error-banner" id="error-banner"></div>
-    <div class="verdict-block ${verdictClass}">
-      <div class="verdict-number">${score}<span style="font-size:36px">%</span></div>
-      <div class="verdict-unit">AI-generated probability</div>
-      <div class="verdict-text">${verdict}</div>
-      <div class="verdict-sub">${flagCount > 0 ? flagCount + " metadata flag(s) detected" : "No metadata flags"}</div>
-    </div>
-    <div class="scores-block">
-      <div class="score-row">
-        <div class="score-row-header">
-          <span class="score-row-label">AI Manipulation Score</span>
-          <span class="score-row-val" style="color:${getScoreColor(score)}">${score}%</span>
-        </div>
-        <div class="score-track"><div class="score-track-fill" style="width:${score}%;background:${getScoreColor(score)}"></div></div>
-      </div>
-      <div class="score-row">
-        <div class="score-row-header">
-          <span class="score-row-label">Metadata Integrity</span>
-          <span class="score-row-val" style="color:${metaColor}">${metaIntegrity >= 70 ? "Good" : metaIntegrity >= 40 ? "Partial" : "Poor"} (${metaIntegrity}%)</span>
-        </div>
-        <div class="score-track"><div class="score-track-fill" style="width:${metaIntegrity}%;background:${metaColor}"></div></div>
-      </div>
-      <div class="score-row">
-        <div class="score-row-header">
-          <span class="score-row-label">Compression Anomaly</span>
-          <span class="score-row-val" style="color:${compColor}">${compressionAnomaly} / 100</span>
-        </div>
-        <div class="score-track"><div class="score-track-fill" style="width:${compressionAnomaly}%;background:${compColor}"></div></div>
-      </div>
-    </div>
-    <div class="image-block">
-      <div class="block-label">Heatmap Overlay</div>
-      <div class="img-container" id="img-container">
-        <img id="preview-img" src="" alt="preview" />
-        <canvas class="heatmap-canvas" id="heatmap-canvas"></canvas>
-      </div>
-      <div class="img-legend">
-        <div class="il"><div class="il-swatch" style="background:rgba(255,69,69,0.7)"></div>High risk</div>
-        <div class="il"><div class="il-swatch" style="background:rgba(245,158,11,0.7)"></div>Medium risk</div>
-      </div>
-      <div class="heatmap-note">* Heatmap is a visual approximation. Precise region data pending backend update.</div>
-    </div>
-    <div class="meta-block">
-      <div class="block-label">EXIF Metadata</div>
-      <div class="meta-list">${exifRows}</div>
-    </div>
-    <div class="action-block">
-      <button class="btn-big primary" id="btn-export">Export PDF Report</button>
-      <div class="btn-row">
-        <button class="btn-big secondary" id="btn-new">New Scan</button>
-        <button class="btn-big secondary" id="btn-add-case">Add to Case</button>
-      </div>
-      <button class="btn-big secondary" id="btn-reasoning" style="border-color:rgba(0,194,168,0.3);color:var(--teal)">Forensic Reasoning</button>
-    </div>
-  `;
-
-    const imgEl = document.getElementById("preview-img");
-    const canvas = document.getElementById("heatmap-canvas");
-    const objectUrl = URL.createObjectURL(file);
-    imgEl.src = objectUrl;
-    imgEl.onload = () => {
-        setTimeout(() => renderHeatmap(canvas, score), 100);
-        URL.revokeObjectURL(objectUrl);
-    };
-
-    const reasoning = generateForensicReasoning(score, verdict, metaIntegrity, compressionAnomaly, exif_flags, file);
-
-    document.getElementById("btn-new").addEventListener("click", resetUI);
-    document.getElementById("btn-export").addEventListener("click", () => exportPDF(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags));
-    document.getElementById("btn-add-case").addEventListener("click", () => openCaseDropdown(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, reasoning));
-    document.getElementById("btn-reasoning").addEventListener("click", () => showReasoningPopup(reasoning));
-
-    currentResult = { data, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, reasoning };
 }
 
 function buildExifRows(exif_flags, sha256, file, exif_values = {}) {
@@ -305,7 +214,108 @@ function buildExifRows(exif_flags, sha256, file, exif_values = {}) {
   `).join("");
 }
 
+function renderResults(data, file, sha256) {
+    const { score, verdict, exif_flags, exif_values = {} } = data;
+    const metaIntegrity = computeMetadataIntegrity(exif_flags);
+    const compressionAnomaly = computeCompressionAnomaly(score);
+    const verdictClass = getVerdictClass(verdict);
+    const analyzedAt = formatDate(new Date());
+    const fileSize = formatFileSize(file.size);
+    const ext = file.name.split(".").pop().toUpperCase();
+    const flagCount = exif_flags.filter(f => !f.startsWith("No suspicious")).length;
+
+    saveToHistory(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags);
+
+    const exifRows = buildExifRows(exif_flags, sha256, file, exif_values);
+    const metaColor = metaIntegrity >= 70 ? "var(--green)" : metaIntegrity >= 40 ? "var(--amber)" : "var(--red)";
+    const compColor = getScoreColor(compressionAnomaly);
+
+    rightPanel.innerHTML = `
+    <div class="results-header">
+      <div class="results-eyebrow">Analysis Result</div>
+      <div class="results-filename">${file.name}</div>
+      <div class="results-meta-line">${fileSize} · ${ext} · Analyzed ${analyzedAt}</div>
+    </div>
+    <div class="error-banner" id="error-banner"></div>
+    <div class="verdict-block ${verdictClass}">
+      <div class="verdict-number">${score}<span style="font-size:36px">%</span></div>
+      <div class="verdict-unit">AI-generated probability</div>
+      <div class="verdict-text">${verdict}</div>
+      <div class="verdict-sub">${flagCount > 0 ? flagCount + " metadata flag(s) detected" : "No metadata flags"}</div>
+    </div>
+    <div class="scores-block">
+      <div class="score-row">
+        <div class="score-row-header">
+          <span class="score-row-label">AI Manipulation Score</span>
+          <span class="score-row-val" style="color:${getScoreColor(score)}">${score}%</span>
+        </div>
+        <div class="score-track"><div class="score-track-fill" style="width:${score}%;background:${getScoreColor(score)}"></div></div>
+      </div>
+      <div class="score-row">
+        <div class="score-row-header">
+          <span class="score-row-label">Metadata Integrity</span>
+          <span class="score-row-val" style="color:${metaColor}">${metaIntegrity >= 70 ? "Good" : metaIntegrity >= 40 ? "Partial" : "Poor"} (${metaIntegrity}%)</span>
+        </div>
+        <div class="score-track"><div class="score-track-fill" style="width:${metaIntegrity}%;background:${metaColor}"></div></div>
+      </div>
+      <div class="score-row">
+        <div class="score-row-header">
+          <span class="score-row-label">Compression Anomaly</span>
+          <span class="score-row-val" style="color:${compColor}">${compressionAnomaly} / 100</span>
+        </div>
+        <div class="score-track"><div class="score-track-fill" style="width:${compressionAnomaly}%;background:${compColor}"></div></div>
+      </div>
+    </div>
+    <div class="image-block">
+      <div class="block-label">Heatmap Overlay</div>
+      <div class="img-container" id="img-container">
+        <img id="preview-img" src="" alt="preview" />
+        <canvas class="heatmap-canvas" id="heatmap-canvas"></canvas>
+      </div>
+      <div class="img-legend">
+        <div class="il"><div class="il-swatch" style="background:rgba(255,69,69,0.7)"></div>High risk</div>
+        <div class="il"><div class="il-swatch" style="background:rgba(245,158,11,0.7)"></div>Medium risk</div>
+      </div>
+      <div class="heatmap-note">* Heatmap is a visual approximation.</div>
+    </div>
+    <div class="meta-block">
+      <div class="block-label">EXIF Metadata</div>
+      <div class="meta-list">${exifRows}</div>
+    </div>
+    <div class="action-block">
+      <button class="btn-big primary" id="btn-export">Export PDF Report</button>
+      <div class="btn-row">
+        <button class="btn-big secondary" id="btn-new">New Scan</button>
+        <button class="btn-big secondary" id="btn-add-case">Add to Case</button>
+      </div>
+      <button class="btn-big secondary" id="btn-reasoning" style="border-color:rgba(0,194,168,0.3);color:var(--teal)">Forensic Reasoning</button>
+    </div>
+  `;
+
+    const imgEl = document.getElementById("preview-img");
+    const canvas = document.getElementById("heatmap-canvas");
+    const objectUrl = URL.createObjectURL(file);
+    imgEl.src = objectUrl;
+    imgEl.onload = () => {
+        setTimeout(() => renderHeatmap(canvas, score), 100);
+        URL.revokeObjectURL(objectUrl);
+    };
+
+    const reasoning = generateForensicReasoning(score, verdict, metaIntegrity, compressionAnomaly, exif_flags, file);
+
+    document.getElementById("btn-new").addEventListener("click", resetUI);
+    document.getElementById("btn-export").addEventListener("click", () => exportPDF(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags));
+    document.getElementById("btn-add-case").addEventListener("click", () => openCaseDropdown(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, reasoning));
+    document.getElementById("btn-reasoning").addEventListener("click", () => showReasoningPopup(reasoning));
+
+    currentResult = { data, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, reasoning };
+}
+
 async function exportPDF(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags) {
+    if (!window.jspdf) {
+         alert("PDF library not loaded. Please ensure you are connected to the internet.");
+         return;
+    }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: "mm", format: "a4" });
 
@@ -417,7 +427,6 @@ async function exportPDF(data, file, sha256, metaIntegrity, compressionAnomaly, 
 async function handleFile(file) {
     currentFile = file;
     showAnalyzing();
-
     try {
         const [sha256, apiResult] = await Promise.all([
             computeSHA256(file),
@@ -432,17 +441,14 @@ async function handleFile(file) {
 async function uploadToAPI(file) {
     const form = new FormData();
     form.append("file", file);
-
     const res = await fetch(`${API_BASE}/analyze`, {
         method: "POST",
         body: form
     });
-
     if (!res.ok) {
         const text = await res.text();
         throw new Error(`Backend error ${res.status}: ${text}`);
     }
-
     return res.json();
 }
 
@@ -473,22 +479,46 @@ function resetUI() {
   `;
 }
 
-// Case dropdown 
-const CASES_KEY = "nullify_cases";
-
-function loadCases() {
-    try { return JSON.parse(localStorage.getItem(CASES_KEY)) || []; } catch { return []; }
+async function generateThumbnail(file) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const MAX = 480;
+            const ratio = Math.min(MAX / img.width, MAX / img.height);
+            canvas.width = Math.round(img.width * ratio);
+            canvas.height = Math.round(img.height * ratio);
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            URL.revokeObjectURL(url);
+            resolve(canvas.toDataURL("image/jpeg", 0.8));
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+        img.src = url;
+    });
 }
 
-function saveCases(cases) {
-    localStorage.setItem(CASES_KEY, JSON.stringify(cases));
+function showCaseSuccess(caseName) {
+    const toast = document.createElement("div");
+    toast.style.cssText = `
+        position:fixed;bottom:24px;right:24px;z-index:400;
+        background:var(--panel);border:1px solid rgba(0,194,168,0.3);
+        border-radius:10px;padding:12px 18px;font-size:13px;color:var(--white);
+        display:flex;align-items:center;gap:10px;box-shadow:0 4px 24px rgba(0,0,0,0.4);
+    `;
+    toast.innerHTML = `<span style="color:var(--teal)">✓</span> Added to <strong>${caseName}</strong>`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
 }
 
-function openCaseDropdown(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, reasoning = "") {
+async function openCaseDropdown(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, reasoning = "") {
     const existing = document.getElementById("case-overlay");
     if (existing) existing.remove();
 
-    const cases = loadCases();
+    // Fetch live cases from DB
+    const { data: casesData } = await getCases();
+    const cases = casesData || [];
 
     const overlay = document.createElement("div");
     overlay.id = "case-overlay";
@@ -526,7 +556,7 @@ function openCaseDropdown(data, file, sha256, metaIntegrity, compressionAnomaly,
                         " onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='transparent'">
                             <div>
                                 <div style="font-size:13px;font-weight:500;color:var(--white)">${c.name}</div>
-                                <div style="font-size:11px;color:var(--white-3);font-family:var(--mono)">${c.scans.length} scan${c.scans.length !== 1 ? "s" : ""} · ${c.createdAt}</div>
+                                <div style="font-size:11px;color:var(--white-3);font-family:var(--mono)">${(c.case_scans || []).length} scans</div>
                             </div>
                             <span style="color:var(--teal);font-size:12px;font-weight:600;">Add →</span>
                         </div>
@@ -564,105 +594,64 @@ function openCaseDropdown(data, file, sha256, metaIntegrity, compressionAnomaly,
 
     document.getElementById("btn-create-case").addEventListener("click", async () => {
         const name = document.getElementById("case-search").value.trim();
-        if (!name) { document.getElementById("case-search").focus(); return; }
+        if (!name) return;
         const notes = document.getElementById("case-notes").value.trim();
-        const cases = loadCases();
-        const newCase = {
-            name,
-            createdAt: formatDate(new Date()),
-            notes: "",
-            scans: []
-        };
-        await addScanToCase(newCase, data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, notes, reasoning);
-        cases.push(newCase);
-        saveCases(cases);
+        
+        const { data: newCaseData, error: caseErr } = await createCase(name, notes);
+        
+        if (newCaseData) {
+             const scanData = {
+                 filename: file.name,
+                 fileSize: file.size,
+                 ext: file.name.split(".").pop().toUpperCase(),
+                 score: data.score,
+                 verdict: data.verdict,
+                 exif_flags,
+                 exif_values: data.exif_values || {},
+                 sha256,
+                 metaIntegrity,
+                 compressionAnomaly,
+                 analyzedAt,
+                 notes: notes,
+                 reasoning: reasoning,
+                 thumbnail: await generateThumbnail(file) 
+             };
+             await supabaseAddScanToCase(newCaseData.id, scanData);
+             showCaseSuccess(name);
+        }
         overlay.remove();
-        showCaseSuccess(name);
     });
 
     document.querySelectorAll(".case-list-item").forEach(item => {
         item.addEventListener("click", async () => {
             const index = parseInt(item.dataset.index);
+            const targetCase = cases[index];
             const notes = document.getElementById("case-notes").value.trim();
-            const cases = loadCases();
-            await addScanToCase(cases[index], data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, notes, reasoning);
-            saveCases(cases);
+            
+            const scanData = {
+                filename: file.name,
+                fileSize: file.size,
+                ext: file.name.split(".").pop().toUpperCase(),
+                score: data.score,
+                verdict: data.verdict,
+                exif_flags,
+                exif_values: data.exif_values || {},
+                sha256,
+                metaIntegrity,
+                compressionAnomaly,
+                analyzedAt,
+                notes: notes,
+                reasoning: reasoning,
+                thumbnail: await generateThumbnail(file) 
+            };
+            
+            await supabaseAddScanToCase(targetCase.id, scanData);
             overlay.remove();
-            showCaseSuccess(cases[index].name);
+            showCaseSuccess(targetCase.name);
         });
     });
 }
 
-async function generateThumbnail(file) {
-    return new Promise((resolve) => {
-        const img = new Image();
-        const url = URL.createObjectURL(file);
-        img.onload = () => {
-            const canvas = document.createElement("canvas");
-            const MAX = 480;
-            const ratio = Math.min(MAX / img.width, MAX / img.height);
-            canvas.width = Math.round(img.width * ratio);
-            canvas.height = Math.round(img.height * ratio);
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            URL.revokeObjectURL(url);
-            resolve(canvas.toDataURL("image/jpeg", 0.8));
-        };
-        img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
-        img.src = url;
-    });
-}
-
-async function addScanToCase(caseObj, data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, notes, reasoning = "") {
-    const thumbnail = await generateThumbnail(file);
-    caseObj.scans.push({
-        filename: file.name,
-        fileSize: formatFileSize(file.size),
-        ext: file.name.split(".").pop().toUpperCase(),
-        score: data.score,
-        verdict: data.verdict,
-        exif_flags,
-        exif_values: data.exif_values || {},
-        sha256,
-        metaIntegrity,
-        compressionAnomaly,
-        analyzedAt,
-        notes: notes || "",
-        reasoning: reasoning || "",
-        thumbnail
-    });
-}
-
-function showCaseSuccess(caseName) {
-    const toast = document.createElement("div");
-    toast.style.cssText = `
-        position:fixed;bottom:24px;right:24px;z-index:400;
-        background:var(--panel);border:1px solid rgba(0,194,168,0.3);
-        border-radius:10px;padding:12px 18px;font-size:13px;color:var(--white);
-        display:flex;align-items:center;gap:10px;box-shadow:0 4px 24px rgba(0,0,0,0.4);
-    `;
-    toast.innerHTML = `<span style="color:var(--teal)">✓</span> Added to <strong>${caseName}</strong>`;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-}
-// ── Info modal ────────────────────────────────────────────────
-const infoBtn = document.getElementById("info-btn");
-const infoOverlay = document.getElementById("info-overlay");
-const infoClose = document.getElementById("info-close");
-
-if (infoBtn) {
-    infoBtn.addEventListener("click", () => infoOverlay.classList.add("open"));
-}
-if (infoClose) {
-    infoClose.addEventListener("click", () => infoOverlay.classList.remove("open"));
-}
-if (infoOverlay) {
-    infoOverlay.addEventListener("click", (e) => {
-        if (e.target === infoOverlay) infoOverlay.classList.remove("open");
-    });
-}
-
-// ── Forensic Reasoning ───────────────────────────────────────
 function generateForensicReasoning(score, verdict, metaIntegrity, compressionAnomaly, exif_flags, file) {
     const noExif = exif_flags.includes("No EXIF data found");
     const noCamera = noExif || exif_flags.some(f => f.toLowerCase().includes("no camera"));
@@ -752,3 +741,14 @@ function showReasoningPopup(reasoning) {
     document.getElementById("close-reasoning").addEventListener("click", () => overlay.remove());
     overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
 }
+
+// Info Modal bindings
+const infoBtn = document.getElementById("info-btn");
+const infoOverlay = document.getElementById("info-overlay");
+const infoClose = document.getElementById("info-close");
+
+if (infoBtn) infoBtn.addEventListener("click", () => infoOverlay.classList.add("open"));
+if (infoClose) infoClose.addEventListener("click", () => infoOverlay.classList.remove("open"));
+if (infoOverlay) infoOverlay.addEventListener("click", (e) => {
+    if (e.target === infoOverlay) infoOverlay.classList.remove("open");
+});
