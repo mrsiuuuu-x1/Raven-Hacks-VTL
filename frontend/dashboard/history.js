@@ -1,9 +1,17 @@
 import { getScans, clearAllScans, getUser } from "../supabase.js";
 
-// Route Guard
-getUser().then(user => {
-    if (!user) window.location.href = "../login.html";
-});
+async function loadUser() {
+    const navUser = document.querySelector('.nav-user');
+    if (!navUser) return;
+    const user = await getUser();
+    if (user) {
+        navUser.textContent = user.user_metadata?.username || user.email;
+    } else {
+        navUser.textContent = "Det. A. Rahman"; // temp fallback for local testing
+        // window.location.href = "../index.html"; // uncomment on Vercel
+    }
+}
+loadUser();
 
 function getVerdictClass(verdict) {
     if (verdict === "Definitely AI") return "ai";
@@ -27,11 +35,11 @@ let currentHistory = [];
 async function renderHistory() {
     const body = document.getElementById("history-body");
     const countEl = document.getElementById("scan-count");
-    
+
     body.innerHTML = `<div style="padding: 20px; color: var(--white-3);">Loading records...</div>`;
 
     const { data: history, error } = await getScans();
-    
+
     if (error) {
         body.innerHTML = `<div style="color: var(--red); padding: 20px;">Error loading history: ${error}</div>`;
         return;
@@ -84,7 +92,7 @@ async function renderHistory() {
     `;
 }
 
-window.openDetail = function(index) {
+window.openDetail = function (index) {
     const scan = currentHistory[index];
     if (!scan) return;
 
@@ -156,7 +164,7 @@ window.openDetail = function(index) {
     document.getElementById("modal-overlay").classList.add("open");
 }
 
-window.closeDetail = function() {
+window.closeDetail = function () {
     document.getElementById("modal-overlay").classList.remove("open");
 }
 

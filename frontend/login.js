@@ -1,9 +1,11 @@
 import { signUp, signIn, getUser } from "./supabase.js";
 
 // Redirect if already logged in
-getUser().then(user => {
-    if (user) window.location.href = "./dashboard/index.html";
-});
+// ── Commented out for local Live Server testing ──
+// ── Uncomment before pushing to production ──
+// getUser().then(user => {
+//     if (user) window.location.href = "./dashboard/index.html";
+// });
 
 document.addEventListener('DOMContentLoaded', () => {
     const signupForm = document.getElementById('signupForm');
@@ -184,6 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (!valid) return;
+
             setLoading('loginBtn', 'loginSpinner', true);
             const { error } = await signIn(email, password);
             setLoading('loginBtn', 'loginSpinner', false);

@@ -1,9 +1,17 @@
 import { getCases, deleteCase as supabaseDeleteCase, getUser } from "../supabase.js";
 
-// Route Guard
-getUser().then(user => {
-    if (!user) window.location.href = "../login.html";
-});
+async function loadUser() {
+    const navUser = document.querySelector('.nav-user');
+    if (!navUser) return;
+    const user = await getUser();
+    if (user) {
+        navUser.textContent = user.user_metadata?.username || user.email;
+    } else {
+        navUser.textContent = "Det. A. Rahman"; // temp fallback for local testing
+        // window.location.href = "../index.html"; // uncomment on Vercel
+    }
+}
+loadUser();
 
 function getVerdictClass(verdict) {
     if (verdict === "Definitely AI") return "ai";
@@ -29,7 +37,7 @@ let currentFilter = "all";
 async function renderCases() {
     const body = document.getElementById("cases-body");
     const countEl = document.getElementById("case-count");
-    
+
     body.innerHTML = `<div style="padding: 20px; color: var(--white-3);">Loading cases...</div>`;
 
     const { data: cases, error } = await getCases();
@@ -78,7 +86,7 @@ async function renderCases() {
     body.innerHTML = `<div class="cases-grid">${cards}</div>`;
 }
 
-window.openCase = function(index) {
+window.openCase = function (index) {
     currentCaseIndex = index;
     currentFilter = "all";
     const c = currentCases[index];
@@ -86,7 +94,7 @@ window.openCase = function(index) {
     document.getElementById("view-cases").style.display = "none";
     document.getElementById("view-case").style.display = "block";
     document.getElementById("case-title").textContent = c.name;
-    
+
     const scanCount = c.case_scans ? c.case_scans.length : 0;
     document.getElementById("case-eyebrow").textContent = `${scanCount} scan${scanCount !== 1 ? "s" : ""} · ${c.created_at}`;
 
@@ -144,7 +152,7 @@ function renderCaseScans(scans) {
     `;
 }
 
-window.openScanDetail = function(caseIndex, scanIndex) {
+window.openScanDetail = function (caseIndex, scanIndex) {
     const scan = currentCases[caseIndex].case_scans[scanIndex];
     if (!scan) return;
 
@@ -221,16 +229,16 @@ window.openScanDetail = function(caseIndex, scanIndex) {
     document.getElementById("modal-overlay").classList.add("open");
 }
 
-window.closeDetail = function() {
+window.closeDetail = function () {
     document.getElementById("modal-overlay").classList.remove("open");
 }
 
 let pendingDeleteId = null;
 
-window.triggerDeleteCase = function(index) {
+window.triggerDeleteCase = function (index) {
     const c = currentCases[index];
     document.getElementById("delete-case-name").textContent = `"${c.name}"`;
-    pendingDeleteId = c.id; 
+    pendingDeleteId = c.id;
     document.getElementById("delete-overlay").classList.add("open");
 }
 

@@ -1,11 +1,33 @@
 import { saveScan, getCases, createCase, addScanToCase as supabaseAddScanToCase, getUser } from "../supabase.js";
 
+async function loadUser() {
+    const navUser = document.querySelector('.nav-user');
+    if (!navUser) return;
+
+    const user = await getUser();
+    if (user) {
+        const username = user.user_metadata?.username || user.email;
+        navUser.textContent = username;
+        const logoutBtn = document.getElementById('btn-logout');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                const { signOut } = await import('../supabase.js');
+                await signOut();
+                window.location.href = '../index.html';
+            });
+        }
+    } else {
+        navUser.textContent = "Det. A. Rahman"; // temp fallback for local testing
+        // window.location.href = "../index.html"; // uncomment on Vercel
+    }
+}
+loadUser();
 const API_BASE = "https://mrsiuuuu-x1-nullify-backend.hf.space";
 
 // Route Guard
-getUser().then(user => {
-    if (!user) window.location.href = "../login.html";
-});
+//getUser().then(user => {
+//   if (!user) window.location.href = "../index.html";
+//});
 
 async function saveToHistory(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags) {
     const entry = {
@@ -17,11 +39,11 @@ async function saveToHistory(data, file, sha256, metaIntegrity, compressionAnoma
         exif_flags,
         exif_values: data.exif_values || {},
         sha256,
-        metaIntegrity,       
-        compressionAnomaly,  
+        metaIntegrity,
+        compressionAnomaly,
         analyzedAt
     };
-    
+
     const { error } = await saveScan(entry);
     if (error) console.error("Could not save to history:", error);
 }
@@ -34,9 +56,9 @@ const rightPanel = document.getElementById("right-panel");
 let currentResult = null;
 let currentFile = null;
 
-if(browseBtn) browseBtn.addEventListener("click", () => fileInput.click());
+if (browseBtn) browseBtn.addEventListener("click", () => fileInput.click());
 
-if(dropZone) {
+if (dropZone) {
     dropZone.addEventListener("click", (e) => {
         if (e.target !== browseBtn) fileInput.click();
     });
@@ -56,7 +78,7 @@ if(dropZone) {
     });
 }
 
-if(fileInput) {
+if (fileInput) {
     fileInput.addEventListener("change", () => {
         if (fileInput.files[0]) handleFile(fileInput.files[0]);
     });
@@ -113,7 +135,7 @@ function renderHeatmap(canvas, aiScore) {
     const ctx = canvas.getContext("2d");
     const w = canvas.offsetWidth;
     const h = canvas.offsetHeight;
-    if(w === 0 || h === 0) return;
+    if (w === 0 || h === 0) return;
     canvas.width = w;
     canvas.height = h;
     ctx.clearRect(0, 0, w, h);
@@ -313,8 +335,8 @@ function renderResults(data, file, sha256) {
 
 async function exportPDF(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags) {
     if (!window.jspdf) {
-         alert("PDF library not loaded. Please ensure you are connected to the internet.");
-         return;
+        alert("PDF library not loaded. Please ensure you are connected to the internet.");
+        return;
     }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: "mm", format: "a4" });
@@ -548,8 +570,8 @@ async function openCaseDropdown(data, file, sha256, metaIntegrity, compressionAn
             </div>
             <div id="case-list" style="overflow-y:auto;flex:1;padding:8px 0;">
                 ${cases.length === 0
-                    ? `<div style="padding:32px;text-align:center;color:var(--white-3);font-size:13px;">No cases yet — create one above</div>`
-                    : cases.map((c, i) => `
+            ? `<div style="padding:32px;text-align:center;color:var(--white-3);font-size:13px;">No cases yet — create one above</div>`
+            : cases.map((c, i) => `
                         <div class="case-list-item" data-index="${i}" style="
                             padding:12px 24px;cursor:pointer;display:flex;align-items:center;
                             justify-content:space-between;transition:background 0.1s;
@@ -561,7 +583,7 @@ async function openCaseDropdown(data, file, sha256, metaIntegrity, compressionAn
                             <span style="color:var(--teal);font-size:12px;font-weight:600;">Add →</span>
                         </div>
                     `).join("")
-                }
+        }
             </div>
             <div style="padding:16px 24px;border-top:1px solid var(--border);">
                 <div style="font-size:11px;color:var(--white-3);font-family:var(--mono);">
@@ -596,38 +618,10 @@ async function openCaseDropdown(data, file, sha256, metaIntegrity, compressionAn
         const name = document.getElementById("case-search").value.trim();
         if (!name) return;
         const notes = document.getElementById("case-notes").value.trim();
-        
-        const { data: newCaseData, error: caseErr } = await createCase(name, notes);
-        
-        if (newCaseData) {
-             const scanData = {
-                 filename: file.name,
-                 fileSize: file.size,
-                 ext: file.name.split(".").pop().toUpperCase(),
-                 score: data.score,
-                 verdict: data.verdict,
-                 exif_flags,
-                 exif_values: data.exif_values || {},
-                 sha256,
-                 metaIntegrity,
-                 compressionAnomaly,
-                 analyzedAt,
-                 notes: notes,
-                 reasoning: reasoning,
-                 thumbnail: await generateThumbnail(file) 
-             };
-             await supabaseAddScanToCase(newCaseData.id, scanData);
-             showCaseSuccess(name);
-        }
-        overlay.remove();
-    });
 
-    document.querySelectorAll(".case-list-item").forEach(item => {
-        item.addEventListener("click", async () => {
-            const index = parseInt(item.dataset.index);
-            const targetCase = cases[index];
-            const notes = document.getElementById("case-notes").value.trim();
-            
+        const { data: newCaseData, error: caseErr } = await createCase(name, notes);
+
+        if (newCaseData) {
             const scanData = {
                 filename: file.name,
                 fileSize: file.size,
@@ -642,9 +636,37 @@ async function openCaseDropdown(data, file, sha256, metaIntegrity, compressionAn
                 analyzedAt,
                 notes: notes,
                 reasoning: reasoning,
-                thumbnail: await generateThumbnail(file) 
+                thumbnail: await generateThumbnail(file)
             };
-            
+            await supabaseAddScanToCase(newCaseData.id, scanData);
+            showCaseSuccess(name);
+        }
+        overlay.remove();
+    });
+
+    document.querySelectorAll(".case-list-item").forEach(item => {
+        item.addEventListener("click", async () => {
+            const index = parseInt(item.dataset.index);
+            const targetCase = cases[index];
+            const notes = document.getElementById("case-notes").value.trim();
+
+            const scanData = {
+                filename: file.name,
+                fileSize: file.size,
+                ext: file.name.split(".").pop().toUpperCase(),
+                score: data.score,
+                verdict: data.verdict,
+                exif_flags,
+                exif_values: data.exif_values || {},
+                sha256,
+                metaIntegrity,
+                compressionAnomaly,
+                analyzedAt,
+                notes: notes,
+                reasoning: reasoning,
+                thumbnail: await generateThumbnail(file)
+            };
+
             await supabaseAddScanToCase(targetCase.id, scanData);
             overlay.remove();
             showCaseSuccess(targetCase.name);
