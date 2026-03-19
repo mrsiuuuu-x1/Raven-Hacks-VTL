@@ -31,7 +31,6 @@ Plugging a hosted ML model into a real app is a completely different experience 
 ## What's Next for Null!fy
 
 - Real GradCAM heatmap pulled from model internals instead of the visual approximation we have now
-- ElevenLabs voice readout of the verdict
 - Video and deepfake detection for CCTV footage
 - Role-based access for investigation teams
 
