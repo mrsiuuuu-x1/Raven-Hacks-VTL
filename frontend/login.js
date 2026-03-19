@@ -1,13 +1,10 @@
 import { signUp, signIn, getUser, signOut, isUsernameTaken } from "./supabase.js";
 
-// Redirect if already logged in
-// ── Commented out for local Live Server testing ──
-// ── Uncomment before pushing to production ──
-// getUser().then(user => {
-//     if (user) window.location.href = "./dashboard/index.html";
-// });
-
 document.addEventListener('DOMContentLoaded', () => {
+    // Redirect if already logged in
+    getUser().then(user => {
+        if (user) window.location.href = "./dashboard/index.html";
+    });
     const signupForm = document.getElementById('signupForm');
     const loginForm = document.getElementById('loginForm');
     const switchToLogin = document.getElementById('switchToLogin');
@@ -69,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const level = strengthLevels[score - 1] || strengthLevels[0];
+            const level = strengthLevels[Math.max(0, score - 1)];
             pwBar.style.width = level.pct + '%';
             pwBar.style.background = level.color;
             pwLabel.textContent = level.label;
@@ -175,8 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Visually switch over to the Login Form
             signupForm.classList.add('hidden');
             loginForm.classList.remove('hidden');
-            
-            // Pre-fill the email they just used to save them some typing
             document.getElementById('loginEmail').value = email;
             document.getElementById('loginPassword').value = '';
             document.getElementById('loginPassword').focus();

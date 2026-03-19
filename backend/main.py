@@ -15,22 +15,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp", "image/tiff"}
+MAX_FILE_SIZE = 50 * 1024 * 1024
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
-    temp_path = f"temp_{uuid.uuid4().hex}_{file.filename}"
+    if file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: {file.content_type}. Allowed: JPEG, PNG, WEBP, TIFF.")
+
+    contents = await file.read()
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail="File too large. Maximum size is 50MB.")
+
+    ext = os.path.splitext(file.filename)[-1].lower() if file.filename else ".jpg"
+    temp_path = f"temp_{uuid.uuid4().hex}{ext}"
 
     with open(temp_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        buffer.write(contents)
 
     try:
         detection_result = analyze_image(temp_path)
         exif_result = analyze_exif(temp_path)
+    except RuntimeError as e:
+        raise HTTPException(status_code=502, detail=str(e))
     finally:
-        os.remove(temp_path)
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
 
     return {
         "score": detection_result["score"],

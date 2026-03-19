@@ -1,5 +1,8 @@
 from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
+import logging
+
+logger = logging.getLogger(__name__)
 
 def _parse_coord(value):
     """Convert a GPS coordinate tuple to decimal degrees."""
@@ -48,7 +51,8 @@ def analyze_exif(image_path: str) -> dict:
 
     try:
         img = Image.open(image_path)
-        exif_data = img._getexif() if hasattr(img, "_getexif") else None
+        # Use the public getexif() API — works across JPEG, PNG, WEBP, TIFF
+        exif_data = img.getexif()
 
         if not exif_data:
             flags.append("No EXIF data found")
@@ -86,6 +90,7 @@ def analyze_exif(image_path: str) -> dict:
             flags.append("No suspicious metadata flags found")
 
     except Exception as e:
-        flags.append(f"Could not read metadata: {str(e)}")
+        logger.error("Failed to read EXIF from %s: %s", image_path, e)
+        raise RuntimeError(f"Could not read image metadata: {str(e)}")
 
     return {"flags": flags, "values": values}

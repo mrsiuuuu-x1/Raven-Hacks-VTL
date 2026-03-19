@@ -7,8 +7,7 @@ async function loadUser() {
     if (user) {
         navUser.textContent = user.user_metadata?.username || user.email;
     } else {
-        navUser.textContent = "Det. A. Rahman"; // temp fallback for local testing
-        // window.location.href = "../index.html"; // uncomment on Vercel
+        window.location.href = "../login.html";
     }
 }
 loadUser();
@@ -185,8 +184,12 @@ document.getElementById("confirm-ok").addEventListener("click", async () => {
     document.getElementById("confirm-overlay").classList.remove("open");
     const btn = document.getElementById("confirm-ok");
     btn.textContent = "Clearing...";
-    await clearAllScans();
+    const { error } = await clearAllScans();
     btn.textContent = "Clear All";
+    if (error) {
+        console.error("Failed to clear history:", error);
+        return;
+    }
     renderHistory();
 });
 

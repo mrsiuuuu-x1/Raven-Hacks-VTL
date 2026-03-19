@@ -7,8 +7,7 @@ async function loadUser() {
     if (user) {
         navUser.textContent = user.user_metadata?.username || user.email;
     } else {
-        navUser.textContent = "Det. A. Rahman"; // temp fallback for local testing
-        // window.location.href = "../index.html"; // uncomment on Vercel
+        window.location.href = "../login.html";
     }
 }
 loadUser();
@@ -249,7 +248,13 @@ document.getElementById("delete-cancel").addEventListener("click", () => {
 
 document.getElementById("delete-confirm").addEventListener("click", async () => {
     if (pendingDeleteId !== null) {
-        await supabaseDeleteCase(pendingDeleteId);
+        const { error } = await supabaseDeleteCase(pendingDeleteId);
+        if (error) {
+            console.error("Failed to delete case:", error);
+            document.getElementById("delete-overlay").classList.remove("open");
+            pendingDeleteId = null;
+            return;
+        }
         pendingDeleteId = null;
     }
     document.getElementById("delete-overlay").classList.remove("open");

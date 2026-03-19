@@ -1,4 +1,4 @@
-import { saveScan, getCases, createCase, addScanToCase as supabaseAddScanToCase, getUser } from "../supabase.js";
+import { saveScan, getCases, createCase, addScanToCase as supabaseAddScanToCase, getUser, signOut } from "../supabase.js";
 
 async function loadUser() {
     const navUser = document.querySelector('.nav-user');
@@ -11,25 +11,18 @@ async function loadUser() {
         const logoutBtn = document.getElementById('btn-logout');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', async () => {
-                const { signOut } = await import('../supabase.js');
                 await signOut();
-                window.location.href = '../index.html';
+                window.location.href = '../login.html';
             });
         }
     } else {
-        navUser.textContent = "Det. A. Rahman"; // temp fallback for local testing
-        // window.location.href = "../index.html"; // uncomment on Vercel
+        window.location.href = "../login.html";
     }
 }
 loadUser();
 const API_BASE = "https://mrsiuuuu-x1-nullify-backend.hf.space";
 
-// Route Guard
-//getUser().then(user => {
-//   if (!user) window.location.href = "../index.html";
-//});
-
-async function saveToHistory(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags) {
+async function saveToHistory(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, reasoning) {
     const entry = {
         filename: file.name,
         fileSize: file.size,
@@ -41,7 +34,8 @@ async function saveToHistory(data, file, sha256, metaIntegrity, compressionAnoma
         sha256,
         metaIntegrity,
         compressionAnomaly,
-        analyzedAt
+        analyzedAt,
+        reasoning: reasoning || ""
     };
 
     const { error } = await saveScan(entry);
@@ -105,8 +99,7 @@ function computeMetadataIntegrity(exifFlags) {
 
 function computeCompressionAnomaly(score) {
     const base = score * 0.6;
-    const jitter = (Math.random() * 20) - 10;
-    return Math.min(100, Math.max(0, Math.round(base + jitter)));
+    return Math.min(100, Math.max(0, Math.round(base)));
 }
 
 function getScoreColor(val) {
@@ -246,7 +239,8 @@ function renderResults(data, file, sha256) {
     const ext = file.name.split(".").pop().toUpperCase();
     const flagCount = exif_flags.filter(f => !f.startsWith("No suspicious")).length;
 
-    saveToHistory(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags);
+    const reasoning = generateForensicReasoning(score, verdict, metaIntegrity, compressionAnomaly, exif_flags, file);
+    saveToHistory(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags, reasoning);
 
     const exifRows = buildExifRows(exif_flags, sha256, file, exif_values);
     const metaColor = metaIntegrity >= 70 ? "var(--green)" : metaIntegrity >= 40 ? "var(--amber)" : "var(--red)";
@@ -322,8 +316,6 @@ function renderResults(data, file, sha256) {
         setTimeout(() => renderHeatmap(canvas, score), 100);
         URL.revokeObjectURL(objectUrl);
     };
-
-    const reasoning = generateForensicReasoning(score, verdict, metaIntegrity, compressionAnomaly, exif_flags, file);
 
     document.getElementById("btn-new").addEventListener("click", resetUI);
     document.getElementById("btn-export").addEventListener("click", () => exportPDF(data, file, sha256, metaIntegrity, compressionAnomaly, analyzedAt, exif_flags));
